@@ -1,105 +1,41 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  Bell,
-  CalendarDays,
-  ChevronDown,
-  CircleHelp,
-  Filter,
-  LayoutDashboard,
-  ListFilter,
-  Mail,
-  Menu,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Settings2,
-  SlidersHorizontal,
-  Sparkles,
-  Target,
-  Users,
-  X,
-} from 'lucide-react'
+import Link from 'next/link'
+import { ArrowUpRight, Database, LockKeyhole, Network, Play, Sparkles } from 'lucide-react'
 
-const navigation = [
-  { label: 'Overview', icon: LayoutDashboard },
-  { label: 'Contacts', icon: Users },
-  { label: 'Pipeline', icon: Target },
-  { label: 'Activities', icon: CalendarDays },
-]
+const logos = ['Northstar', 'Lattice', 'Monday.com', 'Arc', 'Dropbox']
 
-const contacts = [
-  { name: 'Olivia Rhye', company: 'Vertex Labs', email: 'olivia@vertexlabs.com', stage: 'Qualified', value: '$24,000', color: 'bg-rose-100 text-rose-700', initials: 'OR' },
-  { name: 'Candice Wu', company: 'Acme Co.', email: 'candice@acme.co', stage: 'Proposal', value: '$18,500', color: 'bg-blue-100 text-blue-700', initials: 'CW' },
-  { name: 'Drew Cano', company: 'Catalog', email: 'drew@catalog.com', stage: 'Negotiation', value: '$32,000', color: 'bg-amber-100 text-amber-700', initials: 'DC' },
-  { name: 'Orlando Diggs', company: 'Penta Systems', email: 'orlando@penta.io', stage: 'New lead', value: '$12,800', color: 'bg-violet-100 text-violet-700', initials: 'OD' },
-  { name: 'Andi Lane', company: 'Quotient', email: 'andi@quotient.com', stage: 'Qualified', value: '$9,400', color: 'bg-emerald-100 text-emerald-700', initials: 'AL' },
-]
-
-const chart = [42, 49, 46, 58, 54, 67, 63, 78, 73, 86, 82, 94]
-
-export default function Page() {
-  const [activeNav, setActiveNav] = useState('Overview')
-  const [query, setQuery] = useState('')
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  const visibleContacts = useMemo(
-    () => contacts.filter((contact) => `${contact.name} ${contact.company}`.toLowerCase().includes(query.toLowerCase())),
-    [query],
-  )
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-[#f7f6f2] text-[#151515]">
-      <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        <aside className="hidden w-[228px] shrink-0 flex-col border-r border-[#e7e4dc] bg-[#fbfaf7] px-5 py-6 lg:flex">
-          <div className="flex items-center gap-2 px-2">
-            <div className="flex size-8 items-center justify-center rounded-xl bg-[#ff5b35] text-sm font-bold text-white">S</div>
-            <span className="font-semibold tracking-tight">sequoia</span>
-          </div>
-          <div className="mt-10 flex flex-1 flex-col gap-1">
-            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a19c91]">Workspace</p>
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const active = activeNav === item.label
-              return <button key={item.label} onClick={() => setActiveNav(item.label)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${active ? 'bg-[#f0ede5] font-semibold text-[#1b1b1b]' : 'text-[#77736c] hover:bg-[#f4f1ea]'}`}><Icon className="size-[17px]" />{item.label}</button>
-            })}
-            <div className="my-6 h-px bg-[#e7e4dc]" />
-            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a19c91]">Manage</p>
-            <button className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#77736c] hover:bg-[#f4f1ea]"><Mail className="size-[17px]" />Inbox <span className="ml-auto rounded-full bg-[#ff5b35] px-1.5 py-0.5 text-[10px] font-semibold text-white">8</span></button>
-            <button className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#77736c] hover:bg-[#f4f1ea]"><SlidersHorizontal className="size-[17px]" />Reports</button>
-          </div>
-          <div className="border-t border-[#e7e4dc] pt-4">
-            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#77736c] hover:bg-[#f4f1ea]"><Settings2 className="size-[17px]" />Settings</button>
-            <div className="mt-4 flex items-center gap-3 px-2"><div className="flex size-8 items-center justify-center rounded-full bg-[#1d2939] text-xs font-semibold text-white">JD</div><div className="min-w-0"><p className="truncate text-xs font-semibold">Jordan Davis</p><p className="truncate text-[11px] text-[#99958c]">Admin</p></div><MoreHorizontal className="ml-auto size-4 text-[#aaa59b]" /></div>
-          </div>
-        </aside>
+    <main className="min-h-screen bg-[#151514] px-3 py-3 text-[#f5efdc] sm:px-8 sm:py-8">
+      <div className="mx-auto max-w-[1180px] rounded-[26px] bg-[#f1ead5] p-2 text-[#171716] shadow-2xl sm:p-3">
+        <nav className="flex items-center justify-between px-3 py-4 sm:px-8 sm:py-5">
+          <Link href="/" className="flex items-center gap-2 text-[11px] font-bold tracking-[-0.02em]"><span className="flex size-4 items-center justify-center rounded-[3px] bg-[#171716] text-[9px] text-[#f1ead5]">S</span> / sequoia.ai</Link>
+          <div className="hidden items-center gap-6 text-[11px] font-medium sm:flex"><a href="#product">Product</a><a href="#solutions">Solutions</a><a href="#pricing">Pricing</a><a href="#developers">Developers</a></div>
+          <div className="flex items-center gap-2 text-[11px] font-semibold"><Link href="/dashboard" className="hidden px-3 py-2 sm:block">Log in</Link><Link href="/dashboard" className="rounded-full bg-[#171716] px-4 py-2.5 text-[10px] text-[#f1ead5] transition hover:bg-[#ff5a32]">Get started — It&apos;s free</Link></div>
+        </nav>
 
-        <section className="min-w-0 flex-1">
-          <header className="flex h-[76px] items-center justify-between border-b border-[#e7e4dc] bg-[#fbfaf7] px-5 sm:px-8">
-            <div className="flex items-center gap-3"><button className="lg:hidden"><Menu className="size-5" /></button><div><p className="text-xs text-[#9a968d]">Wednesday, October 7, 2026</p><h1 className="text-lg font-semibold tracking-tight">Good morning, Jordan</h1></div></div>
-            <div className="flex items-center gap-3"><button className="hidden rounded-xl border border-[#e4e0d7] bg-white px-3 py-2 text-xs font-medium text-[#6e6a62] sm:flex sm:items-center sm:gap-2"><CircleHelp className="size-4" />Help center</button><button className="relative rounded-xl border border-[#e4e0d7] bg-white p-2.5"><Bell className="size-4" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#ff5b35]" /></button><button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 rounded-xl border border-[#e4e0d7] bg-white p-1.5 pr-2.5"><div className="flex size-7 items-center justify-center rounded-full bg-[#1d2939] text-[10px] font-semibold text-white">JD</div><ChevronDown className="size-3.5 text-[#8d887e]" /></button></div>
-          </header>
-
-          <div className="px-5 py-7 sm:px-8 sm:py-9">
-            <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><div className="mb-2 flex items-center gap-2 text-xs font-medium text-[#8b867d]"><span className="size-1.5 rounded-full bg-[#ff5b35]" />Sales workspace</div><h2 className="text-[clamp(2rem,4vw,3.25rem)] font-semibold leading-none tracking-[-0.055em]">Your revenue, <span className="font-serif font-normal italic text-[#ff5b35]">in motion.</span></h2><p className="mt-3 max-w-lg text-sm leading-6 text-[#817d75]">Turn every conversation into a clear next step. Here&apos;s how your team is performing this week.</p></div><button className="flex w-fit items-center gap-2 rounded-xl bg-[#ff5b35] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(255,91,53,0.2)] transition hover:bg-[#ea4d2a]"><Plus className="size-4" />Add opportunity</button></div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              {[['Pipeline value', '$184,620', '+18.4%', ArrowUpRight], ['Won this month', '$46,280', '+12.8%', ArrowUpRight], ['Win rate', '42.6%', '-3.2%', ArrowDownRight]].map(([label, value, change, Icon], index) => <div key={label as string} className="rounded-2xl border border-[#e7e4dc] bg-white p-5"><div className="flex items-center justify-between"><p className="text-xs font-medium text-[#89847b]">{label as string}</p><span className="rounded-lg bg-[#f6f4ef] p-2 text-[#9b968c]"><Icon className="size-4" /></span></div><div className="mt-5 flex items-end justify-between"><p className="text-2xl font-semibold tracking-tight">{value as string}</p><p className={`text-xs font-semibold ${index === 2 ? 'text-[#e25a47]' : 'text-[#3d9b76]'}`}>{change as string}</p></div><div className="mt-4 h-1 overflow-hidden rounded-full bg-[#f1eee8]"><div className={`h-full rounded-full ${index === 2 ? 'bg-[#ff9c7f]' : 'bg-[#ff5b35]'}`} style={{ width: `${[78, 61, 43][index]}%` }} /></div></div>)}
+        <section id="product" className="relative overflow-hidden rounded-[14px] bg-[#101010] px-6 py-12 sm:px-9 sm:py-14 lg:px-10 lg:py-16">
+          <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[0.92fr_1.08fr]">
+            <div>
+              <div className="mb-8 flex items-center gap-3 text-[10px] font-medium text-[#d7d0bb]"><span className="flex size-6 items-center justify-center rounded-full bg-[#f1ead5] text-[#171716]"><LockKeyhole className="size-3" /></span><span><strong className="block text-[11px] text-[#f7f0dd]">5,000+ teams</strong><u>Read our success stories</u></span></div>
+              <h1 className="max-w-[510px] text-[clamp(4rem,9vw,7.2rem)] font-normal leading-[0.82] tracking-[-0.08em] text-[#f1ead5]">Sales,<br /><em className="font-serif not-italic text-[#ff5a32]">in motion.</em></h1>
+              <div className="mt-8 max-w-[360px] border-t border-white/10 pt-5"><p className="text-sm leading-6 text-[#aaa79d]">The AI-powered workspace that keeps every conversation, opportunity, and next step moving forward.</p><div className="mt-5 flex flex-wrap gap-4 text-[10px] text-[#d8d1bf]"><span>99.9% uptime</span><span>•</span><span>42% average win rate</span></div></div>
+              <div className="mt-7 flex items-center gap-5"><Link href="/dashboard" className="rounded-full bg-[#ff5a32] px-5 py-3 text-[11px] font-semibold text-white transition hover:bg-[#ff734f]">Open your workspace <ArrowUpRight className="ml-1 inline size-3" /></Link><a href="#solutions" className="flex items-center gap-2 text-[11px] text-[#e2dac7]"><Play className="size-3 fill-current" /> See how it works</a></div>
             </div>
 
-            <div className="mt-4 grid gap-4 xl:grid-cols-[1.45fr_1fr]">
-              <div className="rounded-2xl border border-[#e7e4dc] bg-white p-5 sm:p-6"><div className="flex items-start justify-between"><div><h3 className="font-semibold">Revenue overview</h3><p className="mt-1 text-xs text-[#99958d]">Track your team&apos;s revenue performance</p></div><button className="flex items-center gap-2 rounded-lg border border-[#e8e4dc] px-3 py-2 text-xs font-medium text-[#68645d]"><CalendarDays className="size-3.5" />Last 12 months<ChevronDown className="size-3" /></button></div><div className="mt-8 flex h-48 items-end gap-2 sm:gap-4"><div className="flex h-full flex-col justify-between pb-1 text-[10px] text-[#aaa59b]"><span>$50k</span><span>$40k</span><span>$30k</span><span>$20k</span><span>$10k</span><span>$0</span></div><div className="relative flex h-full flex-1 items-end justify-between gap-1 border-b border-l border-[#eeeae2] pl-3"><div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col justify-between" style={{ height: '100%' }}>{[0,1,2,3,4].map((line) => <span key={line} className="border-t border-dashed border-[#f0ede8]" />)}</div>{chart.map((height, i) => <div key={i} className="group relative flex h-full flex-1 items-end"><div className={`relative z-10 w-full rounded-t-md transition hover:bg-[#ff5b35] ${i === chart.length - 1 ? 'bg-[#ff5b35]' : 'bg-[#f7b19a]'}`} style={{ height: `${height}%` }}><span className="absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded-md bg-[#1c1b1a] px-1.5 py-1 text-[10px] text-white group-hover:block">${height}k</span></div></div>)}</div></div><div className="mt-3 flex justify-between pl-10 text-[10px] text-[#aaa59b]"><span>Nov</span><span>Jan</span><span>Mar</span><span>May</span><span>Jul</span><span>Sep</span></div></div>
-              <div className="rounded-2xl border border-[#e7e4dc] bg-[#1c1b1a] p-6 text-white"><div className="flex items-start justify-between"><div><div className="mb-5 flex size-10 items-center justify-center rounded-xl bg-[#ff5b35]"><Sparkles className="size-5" /></div><h3 className="text-lg font-semibold tracking-tight">Your AI sales copilot</h3><p className="mt-2 max-w-xs text-sm leading-6 text-[#aaa69f]">Get a quick read on your pipeline and find the next best action.</p></div><span className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-[#aaa69f]">BETA</span></div><div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-3.5"><p className="text-xs font-medium text-[#dedbd5]">Today&apos;s insight</p><p className="mt-1.5 text-xs leading-5 text-[#aaa69f]">Your qualified leads are up 24%. Follow up with 3 stalled opportunities to stay on target.</p></div><button className="mt-5 flex items-center gap-2 text-xs font-semibold text-[#ff8b6e]">View recommendations <ArrowUpRight className="size-3.5" /></button></div>
+            <div className="relative min-h-[320px] sm:min-h-[390px]">
+              <div className="absolute inset-x-3 top-10 bottom-0 rounded-[28px] border border-white/10 bg-[#1c1c1b] shadow-[0_20px_80px_rgba(255,90,50,0.12)]" />
+              <div className="absolute right-[22%] top-0 flex size-36 items-center justify-center rounded-[42%_42%_48%_48%] bg-[#ff5a32] shadow-[0_0_0_12px_rgba(255,90,50,0.1)] sm:size-48"><div className="text-center text-white"><p className="text-3xl font-semibold">80</p><p className="text-[10px] uppercase tracking-[0.2em]">Pipeline health</p></div></div>
+              <div className="absolute left-0 top-8 rounded-lg bg-[#2b2b2a] px-4 py-3 text-[10px] text-[#eee7d5]"><span className="mr-2 inline-block size-2 rounded-full bg-[#ff5a32]" />24/7<br /><span className="pl-4 text-[9px] text-[#aaa79d]">AI monitoring</span></div>
+              <div className="absolute bottom-8 left-[8%] right-[4%] rounded-2xl border border-white/10 bg-[#292826] p-3"><div className="rounded-xl bg-[#444039] px-4 py-3 text-[11px] text-[#e9e2d2]"><Sparkles className="mr-2 inline size-3.5 text-[#ff5a32]" /> Prioritizing next best actions...</div><div className="mt-3 grid grid-cols-3 gap-2"><div className="rounded-lg bg-[#3a3833] p-3 text-center text-[10px] text-[#d4cdbb]"><LockKeyhole className="mx-auto mb-1 size-4" />Secure data</div><div className="rounded-lg bg-[#3a3833] p-3 text-center text-[10px] text-[#d4cdbb]"><Network className="mx-auto mb-1 size-4" />Team signals</div><div className="rounded-lg bg-[#3a3833] p-3 text-center text-[10px] text-[#d4cdbb]"><Database className="mx-auto mb-1 size-4" />Revenue data</div></div></div>
             </div>
-
-            <div className="mt-4 rounded-2xl border border-[#e7e4dc] bg-white"><div className="flex flex-col gap-4 border-b border-[#eeeae2] p-5 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-semibold">Recent opportunities</h3><p className="mt-1 text-xs text-[#99958d]">The latest movement across your pipeline</p></div><div className="flex items-center gap-2"><div className="flex items-center rounded-lg border border-[#e8e4dc] px-2.5"><Search className="size-3.5 text-[#aaa59b]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" className="w-20 bg-transparent px-2 py-2 text-xs outline-none placeholder:text-[#aaa59b] sm:w-28" />{query && <button onClick={() => setQuery('')}><X className="size-3 text-[#aaa59b]" /></button>}</div><button className="rounded-lg border border-[#e8e4dc] p-2 text-[#77736c]"><Filter className="size-3.5" /></button><button className="rounded-lg border border-[#e8e4dc] p-2 text-[#77736c]"><ListFilter className="size-3.5" /></button></div></div><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-xs"><thead className="bg-[#fcfbf9] text-[10px] uppercase tracking-[0.12em] text-[#aaa59b]"><tr><th className="px-5 py-3 font-semibold">Contact</th><th className="px-5 py-3 font-semibold">Stage</th><th className="px-5 py-3 font-semibold">Value</th><th className="px-5 py-3 font-semibold">Last activity</th><th className="px-5 py-3" /></tr></thead><tbody>{visibleContacts.map((contact, i) => <tr key={contact.email} className="border-t border-[#f0ede8] transition hover:bg-[#fdfcf9]"><td className="px-5 py-3.5"><div className="flex items-center gap-3"><div className={`flex size-8 items-center justify-center rounded-full text-[10px] font-semibold ${contact.color}`}>{contact.initials}</div><div><p className="font-semibold">{contact.name}</p><p className="mt-0.5 text-[11px] text-[#aaa59b]">{contact.company}</p></div></div></td><td className="px-5 py-3.5"><span className="rounded-full bg-[#f3f1ec] px-2.5 py-1 text-[10px] font-medium text-[#77736c]">{contact.stage}</span></td><td className="px-5 py-3.5 font-semibold">{contact.value}</td><td className="px-5 py-3.5 text-[#99958d]">{['2 hours ago', 'Yesterday', 'Yesterday', '2 days ago', '3 days ago'][i]}</td><td className="px-5 py-3.5 text-right"><button className="rounded-lg p-1.5 text-[#aaa59b] hover:bg-[#f2f0eb]"><MoreHorizontal className="size-4" /></button></td></tr>)}</tbody></table></div></div>
           </div>
         </section>
+
+        <div className="flex flex-wrap items-center justify-between gap-5 px-6 py-5 sm:px-10">{logos.map((logo) => <span key={logo} className="text-sm font-bold tracking-tight text-[#171716] sm:text-base">{logo}</span>)}</div>
       </div>
-      {menuOpen && <button aria-label="Close profile menu" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-10 cursor-default" />}
+      <p className="mx-auto mt-4 max-w-[1180px] px-2 text-[10px] tracking-[0.18em] text-[#77746b]">SEQUOIA SALES OS / TURN SIGNALS INTO MOMENTUM</p>
     </main>
   )
 }

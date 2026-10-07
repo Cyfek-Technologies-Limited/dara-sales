@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Sequoia — Sales CRM',
-  description: 'A focused sales workspace for moving every opportunity forward.',
+  title: 'Sequoia — Sales, in motion.',
+  description: 'The AI-powered workspace that keeps every sales conversation and opportunity moving forward.',
   generator: 'v0.app',
   icons: {
     icon: [
