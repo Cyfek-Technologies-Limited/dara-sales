@@ -24,7 +24,7 @@ export default function LandingPage() {
           <div className="relative min-h-[430px] sm:min-h-[540px] lg:min-h-[620px]">
             <div className="absolute inset-x-0 top-8 bottom-0 overflow-hidden rounded-[30px] border border-white/10 bg-[#171716] shadow-[0_28px_120px_rgba(255,90,50,0.24)]">
               <div className="absolute inset-0 bg-[#252525]" />
-              <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/sales%20sc-89awtesVRDzKknynXJfHqCkEJO9esQ.png" alt="Customer service professional wearing a headset inside a CRM sales interface" className="relative size-full object-cover object-center opacity-95" />
+              <div className="absolute inset-0 overflow-hidden bg-[#151d3a]"><img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/sales%20sc-89awtesVRDzKknynXJfHqCkEJO9esQ.png" alt="Customer service professional wearing a headset" className="absolute left-1/2 top-1/2 h-[180%] w-[180%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover object-center opacity-95" /></div>
               <div className="absolute inset-0 bg-gradient-to-tr from-[#101010]/35 via-transparent to-[#ff5a32]/10" />
             </div>
             <div className="absolute left-[-2%] top-0 rounded-lg bg-[#2b2b2a] px-4 py-3 text-[10px] text-[#eee7d5] shadow-[0_14px_40px_rgba(0,0,0,0.3)]"><span className="mr-2 inline-block size-2 rounded-full bg-[#ff5a32]" />24/7<br /><span className="pl-4 text-[9px] text-[#aaa79d]">Monitoring</span></div>
