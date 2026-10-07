@@ -47,6 +47,7 @@
 
 :root {
   color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);

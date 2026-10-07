@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+model Opportunity {
+  id           String   @id @default(cuid())
+  name         String
+  company      String
+  email        String
+  stage        String   @default("NEW_LEAD")
+  value        Decimal  @db.Decimal(12, 2)
+  lastActivity DateTime @default(now())
+  ownerId      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([stage])
+  @@index([ownerId])
+  @@schema("public")
+}
+
+model Activity {
+  id            String   @id @default(cuid())
+  opportunityId String
+  type          String
+  note          String?
+  occurredAt    DateTime @default(now())
+
+  @@index([opportunityId, occurredAt])
+  @@schema("public")
+}
