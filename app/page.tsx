@@ -15,7 +15,7 @@ export default function LandingPage() {
       </header>
 
       <section className="relative min-h-[calc(100vh-3rem)] overflow-hidden rounded-t-[10px] bg-[#101010] px-9 py-14 sm:px-14 lg:px-[8%] lg:py-[9vh]" aria-label="Sequoia sales pipeline">
-        <div className="relative z-10 max-w-[430px] pt-5 lg:pt-[3vh]">
+        <div className="relative z-10 max-w-[430px] pt-10 lg:pt-[3vh]">
       
           <h1 className="mt-9 whitespace-nowrap font-serif text-[clamp(4.1rem,8vw,8.4rem)] font-normal leading-[0.78] tracking-[-0.09em] text-[#f2ecd9]">Sales pipeline</h1>
           <p className="mt-9 max-w-[290px] border-t border-white/[0.08] pt-4 text-[12px] leading-[1.55] text-[#aaa79d]">AI-powered sales intelligence that continuously monitors every opportunity, conversation, and next step.</p>
