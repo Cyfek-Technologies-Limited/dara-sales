@@ -16,7 +16,7 @@ export default function LandingPage() {
 
       <section className="relative min-h-[calc(100vh-3rem)] overflow-hidden rounded-t-[10px] bg-[#101010] px-9 py-14 sm:px-14 lg:px-[8%] lg:py-[9vh]" aria-label="Sequoia sales pipeline">
         <div className="relative z-10 max-w-[430px] pt-2 lg:pt-[3vh]">
-          <div className="flex items-start gap-3 text-[10px] leading-[1.1] text-[#f2ecd9]"><span className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-[#f2ecd9] text-[#101010]"><LockKeyhole className="size-3" /></span><span><strong className="font-semibold">1.4M+ User</strong><br /><u className="text-[8px] underline-offset-2">Read Our Success Stories</u></span></div>
+      
           <h1 className="mt-9 whitespace-nowrap font-serif text-[clamp(4.1rem,8vw,8.4rem)] font-normal leading-[0.78] tracking-[-0.09em] text-[#f2ecd9]">Sales pipeline</h1>
           <p className="mt-9 max-w-[290px] border-t border-white/[0.08] pt-4 text-[12px] leading-[1.55] text-[#aaa79d]">AI-powered sales intelligence that continuously monitors every opportunity, conversation, and next step.</p>
           <div className="mt-5 flex gap-3 text-[12px] text-[#d8d1bf]"><span>99.9% Success Rate for Sales</span><span>•</span><span>5.0</span></div>
