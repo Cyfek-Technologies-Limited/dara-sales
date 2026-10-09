@@ -24,7 +24,7 @@ export default function LandingPage() {
         </div>
 
         <div className="pointer-events-none absolute right-[-2%] top-[3%] h-[96%] w-[58%] min-w-[480px] max-w-[860px]">
-          <img src={representative} alt="Customer service representative wearing a headset" className="absolute bottom-0 right-0 h-[108%] w-full max-w-none object-contain object-bottom drop-shadow-[0_28px_70px_rgba(255,90,50,0.28)]" />
+          <img src={representative} alt="Customer service representative wearing a headset" className="absolute bottom-0 right-0 h-[100%] w-full max-w-none object-contain object-bottom drop-shadow-[0_28px_70px_rgba(255,90,50,0.28)]" />
         </div>
       </section>
     </main>
