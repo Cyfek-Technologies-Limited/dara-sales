@@ -29,7 +29,9 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         setPending(false)
         return
       }
-        router.push(mode === 'sign-up' && role === 'company' ? '/onboarding' : '/dashboard')
+        const destination = mode === 'sign-up' && role === 'company' ? '/onboarding' : '/dashboard'
+        console.log('[v0] Authentication succeeded; redirecting to:', destination)
+        router.replace(destination)
         router.refresh()
     } catch (cause) {
       console.error('[v0] Authentication request threw:', cause)
