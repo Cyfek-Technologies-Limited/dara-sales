@@ -19,16 +19,22 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     const email = String(data.get('email') ?? '')
     const password = String(data.get('password') ?? '')
     const name = String(data.get('name') ?? '')
-    const result = mode === 'sign-in'
-      ? await authClient.signIn.email({ email, password })
-      : await authClient.signUp.email({ email, password, name })
-    if (result.error) {
-      setError('We could not complete that request. Check your details and try again.')
+    try {
+      const result = mode === 'sign-in'
+        ? await authClient.signIn.email({ email, password })
+        : await authClient.signUp.email({ email, password, name })
+      if (result.error) {
+        console.error('[v0] Authentication request failed:', result.error)
+        setError(result.error.message || 'We could not complete that request. Check your details and try again.')
+        setPending(false)
+        return
+      }
+        router.refresh()
+    } catch (cause) {
+      console.error('[v0] Authentication request threw:', cause)
+      setError(cause instanceof Error ? cause.message : 'The request failed before the server returned a response. Please try again.')
       setPending(false)
-      return
     }
-    router.push('/dashboard')
-    router.refresh()
   }
 
   return (
