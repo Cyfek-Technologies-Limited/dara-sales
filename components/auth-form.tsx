@@ -20,7 +20,7 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         : await authClient.signUp.email({ email: String(data.get('email') ?? ''), password: String(data.get('password') ?? ''), name: String(data.get('name') ?? '') })
       if (result.error) {
         console.error('[v0] Authentication request failed:', result.error)
-        setError(result.error.message || 'We could not complete that request. Please check your details.')
+        setError(`${result.error.code || 'AUTH_REQUEST_FAILED'}: ${result.error.message || 'Check your details and try again.'}`)
         return
       }
       router.replace(mode === 'sign-up' ? '/onboarding' : '/dashboard')
@@ -36,7 +36,7 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   async function continueWithGoogle() {
     setPending(true)
     const result = await authClient.signIn.social({ provider: 'google', callbackURL: '/onboarding' })
-    if (result.error) setError(result.error.message || 'Google sign-in could not be started.')
+    if (result.error) setError(`${result.error.code || 'GOOGLE_AUTH_FAILED'}: ${result.error.message || 'Google sign-in could not be started.'}`)
     setPending(false)
   }
 
