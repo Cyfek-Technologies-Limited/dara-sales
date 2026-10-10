@@ -31,6 +31,13 @@ export const auth = betterAuth({
         ? `https://${process.env.VERCEL_URL}`
         : process.env.V0_RUNTIME_URL),
   emailAndPassword: { enabled: true, autoSignIn: true },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      scope: ['openid', 'email', 'profile'],
+    },
+  },
   trustedOrigins,
   session: { expiresIn: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
   ...(process.env.NODE_ENV === 'development'
