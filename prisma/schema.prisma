@@ -16,6 +16,9 @@ model Organization {
   contactPhone      String?
   industry          String?
   size              String?
+  staffCount        Int?
+  primaryGoal       String?
+  monthlyProjection String?
   status            String             @default("PENDING")
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
