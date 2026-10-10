@@ -157,9 +157,9 @@ export default function LandingPage() {
         </nav>
 
         <div className="flex items-center gap-5">
-          <Link href="/dashboard">Log in</Link>
+          <Link href="/sign-in">Log in</Link>
           <Link
-            href="/dashboard"
+            href="/sign-up"
             className="rounded-full bg-[#171717] px-4 py-2 text-[13px] text-white"
           >
             Get it Now—It&apos;s Free
@@ -198,7 +198,7 @@ export default function LandingPage() {
 
           <div className="mt-5 border-t border-white/[0.08] pt-6">
             <Link
-              href="/dashboard"
+              href="/sign-up"
               className="inline-flex items-center gap-2 rounded-full bg-[#ff5a32] px-4 py-2.5 text-[9px] font-medium text-white"
             >
               Start for free <ArrowUpRight className="size-3" />
