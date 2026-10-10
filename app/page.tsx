@@ -160,7 +160,7 @@ export default function LandingPage() {
           <Link href="/dashboard">Log in</Link>
           <Link
             href="/dashboard"
-            className="rounded-full bg-[#171717] px-4 py-2 text-[8px] text-white"
+            className="rounded-full bg-[#171717] px-4 py-2 text-[13px] text-white"
           >
             Get it Now—It&apos;s Free
           </Link>
