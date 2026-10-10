@@ -23,7 +23,18 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
         setError(`${result.error.code || 'AUTH_REQUEST_FAILED'}: ${result.error.message || 'Check your details and try again.'}`)
         return
       }
-      router.replace(mode === 'sign-up' ? '/onboarding' : '/dashboard')
+      if (mode === 'sign-up') {
+        router.replace('/onboarding')
+      } else {
+        const redirectResponse = await fetch('/api/auth/redirect', { cache: 'no-store' })
+        const redirectData = await redirectResponse.json()
+        if (!redirectResponse.ok) {
+          setError(`${redirectData.code || 'ROLE_LOOKUP_FAILED'}: Could not determine your workspace role.`)
+          return
+        }
+        console.log('[v0] Sign-in role redirect:', redirectData)
+        router.replace(redirectData.destination)
+      }
       router.refresh()
     } catch (cause) {
       console.error('[v0] Authentication request threw:', cause)
