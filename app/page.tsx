@@ -138,7 +138,7 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#f0ead7] text-[#171717]">
       {/* Navigation — preserved */}
-      <header className="sticky top-0 z-20 flex h-12 items-center justify-between bg-[#f0ead7] px-8 text-[9px] font-medium tracking-[-0.01em] sm:px-12 lg:px-14">
+      <header className="sticky top-0 z-20 flex h-12 items-center justify-between bg-[#f0ead7] px-8 text-[12px] font-medium tracking-[-0.01em] sm:px-12 lg:px-14">
         <Link
           href="/"
           className="flex items-center gap-1.5 font-sans font-bold tracking-[-0.08em]"
