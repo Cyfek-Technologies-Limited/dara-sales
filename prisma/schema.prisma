@@ -19,6 +19,7 @@ model Organization {
   staffCount        Int?
   primaryGoal       String?
   monthlyProjection String?
+  plan              String             @default("FREE")
   status            String             @default("PENDING")
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
