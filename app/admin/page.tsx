@@ -548,4 +548,3 @@ export default async function AdminDashboard() {
     </main>
   )
 }
-```
