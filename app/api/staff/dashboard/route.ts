@@ -37,5 +37,12 @@ export async function GET() {
     ),
   ])
 
-  return NextResponse.json({ user: { name: session.user.name, email: session.user.email }, organization: member, performance: performance.rows[0], opportunities: opportunities.rows, activities: activities.rows })
+  const [today, thisMonth] = await Promise.all([
+    pool.query(`SELECT COUNT(*) FILTER (WHERE LOWER("type") IN ('contacted', 'call', 'email', 'outreach'))::int AS "outreach", COUNT(*) FILTER (WHERE LOWER("type") IN ('response', 'replied', 'reply'))::int AS "responses", COUNT(*) FILTER (WHERE LOWER("type") IN ('contacted', 'call', 'email', 'outreach'))::int AS "leadContacted" FROM "Activity" a JOIN "Opportunity" o ON o."id" = a."opportunityId" WHERE a."organizationId" = $1 AND o."ownerId" = $2 AND a."occurredAt" >= CURRENT_DATE`, [member.organizationId, session.user.id]),
+    pool.query(`SELECT COUNT(*) FILTER (WHERE "stage" = 'WON')::int AS "deals", COALESCE(SUM(CASE WHEN "stage" = 'WON' THEN "value" ELSE 0 END), 0)::numeric AS "revenue", COUNT(*) FILTER (WHERE "stage" = 'WON')::int AS "clients" FROM "Opportunity" WHERE "organizationId" = $1 AND "ownerId" = $2 AND "updatedAt" >= date_trunc('month', CURRENT_DATE)`, [member.organizationId, session.user.id]),
+  ])
+  const todayRow = today.rows[0]
+  const monthRow = thisMonth.rows[0]
+  const responseRate = Number(todayRow.outreach) ? Math.round((Number(todayRow.responses) / Number(todayRow.outreach)) * 100) : 0
+  return NextResponse.json({ user: { name: session.user.name, email: session.user.email }, organization: member, performance: performance.rows[0], opportunities: opportunities.rows, activities: activities.rows, today: { ...todayRow, responseRate }, targets: { outreach: 20 }, thisMonth: monthRow })
 }
