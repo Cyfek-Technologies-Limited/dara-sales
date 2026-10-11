@@ -43,6 +43,7 @@ export async function GET() {
   ])
   const todayRow = today.rows[0]
   const monthRow = thisMonth.rows[0]
-  const responseRate = Number(todayRow.outreach) ? Math.round((Number(todayRow.responses) / Number(todayRow.outreach)) * 100) : 0
+  const responseTarget = 20
+  const responseRate = Math.round((Number(todayRow.responses) / responseTarget) * 100)
   return NextResponse.json({ user: { name: session.user.name, email: session.user.email }, organization: member, performance: performance.rows[0], opportunities: opportunities.rows, activities: activities.rows, today: { ...todayRow, responseRate }, targets: { outreach: 20 }, thisMonth: monthRow })
 }
