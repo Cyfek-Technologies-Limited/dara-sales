@@ -96,6 +96,10 @@ model Opportunity {
   name         String
   company      String
   email        String
+  website      String?
+  companyAddress String?
+  contactAddress String?
+  phone        String?
   stage        String        @default("NEW_LEAD")
   value        Decimal       @db.Decimal(12, 2)
   lastActivity DateTime      @default(now())
