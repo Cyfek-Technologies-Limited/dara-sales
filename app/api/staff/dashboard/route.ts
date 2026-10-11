@@ -38,7 +38,7 @@ export async function GET() {
   ])
 
   const [today, thisMonth] = await Promise.all([
-    pool.query(`SELECT COUNT(*) FILTER (WHERE LOWER("type") IN ('contacted', 'call', 'email', 'outreach'))::int AS "outreach", COUNT(*) FILTER (WHERE LOWER("type") IN ('response', 'replied', 'reply'))::int AS "responses", COUNT(*) FILTER (WHERE LOWER("type") IN ('contacted', 'call', 'email', 'outreach'))::int AS "leadContacted" FROM "Activity" a JOIN "Opportunity" o ON o."id" = a."opportunityId" WHERE a."organizationId" = $1 AND o."ownerId" = $2 AND a."occurredAt" >= CURRENT_DATE`, [member.organizationId, session.user.id]),
+    pool.query(`SELECT COUNT(DISTINCT o."id") FILTER (WHERE o."createdAt" >= CURRENT_DATE)::int AS "outreach", COUNT(*) FILTER (WHERE LOWER(a."type") IN ('response', 'replied', 'reply') AND a."occurredAt" >= CURRENT_DATE)::int AS "responses", COUNT(DISTINCT o."id") FILTER (WHERE o."createdAt" >= CURRENT_DATE)::int AS "leadContacted" FROM "Opportunity" o LEFT JOIN "Activity" a ON a."opportunityId" = o."id" AND a."organizationId" = $1 WHERE o."organizationId" = $1 AND o."ownerId" = $2`, [member.organizationId, session.user.id]),
     pool.query(`SELECT COUNT(*) FILTER (WHERE "stage" = 'WON')::int AS "deals", COALESCE(SUM(CASE WHEN "stage" = 'WON' THEN "value" ELSE 0 END), 0)::numeric AS "revenue", COUNT(*) FILTER (WHERE "stage" = 'WON')::int AS "clients" FROM "Opportunity" WHERE "organizationId" = $1 AND "ownerId" = $2 AND "updatedAt" >= date_trunc('month', CURRENT_DATE)`, [member.organizationId, session.user.id]),
   ])
   const todayRow = today.rows[0]
