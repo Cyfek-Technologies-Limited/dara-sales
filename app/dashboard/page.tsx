@@ -1,6 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
+import { StaffSidebar } from '@/components/staff-sidebar'
 import { useMemo, useState } from 'react'
 import {
   ArrowDownRight,
@@ -60,7 +61,8 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-[#f7f6f2] text-[#151515]">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        <aside className="hidden w-[228px] shrink-0 flex-col border-r border-[#e7e4dc] bg-[#fbfaf7] px-5 py-6 lg:flex">
+        <StaffSidebar active="Overview" />
+        {/*
           <div className="flex items-center gap-2 px-2">
             <div className="flex size-8 items-center justify-center rounded-xl bg-[#ff5b35] text-sm font-bold text-white">S</div>
             <span className="font-semibold tracking-tight">sequoia</span>
@@ -81,7 +83,7 @@ export default function Page() {
             <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[#77736c] hover:bg-[#f4f1ea]"><Settings2 className="size-[17px]" />Settings</button>
             <div className="mt-4 flex items-center gap-3 px-2"><div className="flex size-8 items-center justify-center rounded-full bg-[#1d2939] text-xs font-semibold text-white">JD</div><div className="min-w-0"><p className="truncate text-xs font-semibold">{data?.user?.name || 'Staff member'}</p><p className="truncate text-[11px] text-[#99958c]">Staff</p></div><MoreHorizontal className="ml-auto size-4 text-[#aaa59b]" /></div>
           </div>
-        </aside>
+        */}
 
         <section className="min-w-0 flex-1">
           <header className="flex h-[76px] items-center justify-between border-b border-[#e7e4dc] bg-[#fbfaf7] px-5 sm:px-8">
