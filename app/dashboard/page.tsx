@@ -83,7 +83,7 @@ export default function Page() {
 
         <section className="min-w-0 flex-1">
           <header className="flex h-[76px] items-center justify-between border-b border-[#e7e4dc] bg-[#fbfaf7] px-5 sm:px-8">
-            <div className="flex items-center gap-3"><button className="lg:hidden"><Menu className="size-5" /></button><div><p className="text-xs text-[#9a968d]">Wednesday, October 7, 2026</p><h1 className="text-lg font-semibold tracking-tight">Good morning, {data?.user?.name || 'there'}</h1></div></div>
+            <div className="flex items-center gap-3"><button className="lg:hidden"><Menu className="size-5" /></button><div><h1 className="text-lg font-semibold tracking-tight">Good morning, {data?.user?.name || 'there'}</h1></div></div>
             <div className="flex items-center gap-3"><button className="hidden rounded-xl border border-[#e4e0d7] bg-white px-3 py-2 text-xs font-medium text-[#6e6a62] sm:flex sm:items-center sm:gap-2"><CircleHelp className="size-4" />Help center</button><button className="relative rounded-xl border border-[#e4e0d7] bg-white p-2.5"><Bell className="size-4" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#ff5b35]" /></button><button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 rounded-xl border border-[#e4e0d7] bg-white p-1.5 pr-2.5"><div className="flex size-7 items-center justify-center rounded-full bg-[#1d2939] text-[10px] font-semibold text-white">JD</div><ChevronDown className="size-3.5 text-[#8d887e]" /></button></div>
           </header>
 
