@@ -30,12 +30,11 @@ export async function POST(request: Request) {
   const email = String(body.email || '').trim()
   const website = String(body.website || '').trim()
   const companyAddress = String(body.companyAddress || '').trim()
-  const contactAddress = String(body.contactAddress || '').trim()
   const phone = String(body.phone || '').trim()
-  if (!name || !company || !email || !phone || !website || !companyAddress || !contactAddress) return NextResponse.json({ code: 'INVALID_LEAD_INPUT', message: 'Name, company, email, phone, website, company address, and contact address are required.' }, { status: 400 })
+  if (!name || !company || !email || !phone || !website || !companyAddress) return NextResponse.json({ code: 'INVALID_LEAD_INPUT', message: 'Name, company, email, phone, website, and company address are required.' }, { status: 400 })
   if (!/^https?:\/\/\S+$/i.test(website)) return NextResponse.json({ code: 'INVALID_WEBSITE', message: 'Website must start with http:// or https://.' }, { status: 400 })
   if (!/^[+\d][\d\s().-]{7,}$/.test(phone)) return NextResponse.json({ code: 'INVALID_PHONE', message: 'Enter a valid phone number.' }, { status: 400 })
-  const result = await pool.query('INSERT INTO "Opportunity" ("id", "organizationId", "name", "company", "email", "website", "companyAddress", "contactAddress", "phone", "value", "ownerId", "stage") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING "id", "name", "company", "email", "website", "companyAddress", "contactAddress", "phone", "stage"', [randomUUID(), context.member.organizationId, name, company, email, website, companyAddress, contactAddress, phone, 0, context.session.user.id, 'LEAD'])
+  const result = await pool.query('INSERT INTO "Opportunity" ("id", "organizationId", "name", "company", "email", "website", "companyAddress", "phone", "value", "ownerId", "stage") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING "id", "name", "company", "email", "website", "companyAddress", "contactAddress", "phone", "stage"', [randomUUID(), context.member.organizationId, name, company, email, website, companyAddress, phone, 0, context.session.user.id, 'LEAD'])
   return NextResponse.json({ lead: result.rows[0] }, { status: 201 })
 }
 
