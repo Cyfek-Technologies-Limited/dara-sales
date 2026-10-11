@@ -31,8 +31,8 @@ export async function GET() {
       [member.organizationId, session.user.id],
     ),
     pool.query(
-      `SELECT COALESCE(SUM("leadsCreated"), 0)::int AS "leadsCreated", COALESCE(SUM("qualifiedLeads"), 0)::int AS "qualifiedLeads", COALESCE(SUM("dealsWon"), 0)::int AS "dealsWon", COALESCE(SUM("revenue"), 0)::numeric AS "revenue", COALESCE(SUM("activities"), 0)::int AS "activities"
-       FROM "StaffPerformance" WHERE "organizationId" = $1 AND "authUserId" = $2`,
+      `SELECT COUNT(*)::int AS "leadsCreated", COUNT(*) FILTER (WHERE "stage" IN ('PROSPECT', 'CLIENT'))::int AS "qualifiedLeads", COUNT(*) FILTER (WHERE "stage" = 'CLIENT')::int AS "dealsWon", COALESCE(SUM(CASE WHEN "stage" = 'CLIENT' THEN "value" ELSE 0 END), 0)::numeric AS "revenue", (SELECT COUNT(*)::int FROM "Activity" WHERE "organizationId" = $1) AS "activities"
+       FROM "Opportunity" WHERE "organizationId" = $1 AND "ownerId" = $2`,
       [member.organizationId, session.user.id],
     ),
   ])
