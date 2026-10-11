@@ -5,7 +5,8 @@ import { pool } from '@/lib/db'
 import { apiError, apiSuccess, internalApiError } from '@/lib/api-error'
 
 export async function POST() {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const requestHeaders = await headers()
+  const session = await auth.api.getSession({ headers: requestHeaders })
   if (!session?.user) return apiError('AUTH_REQUIRED', 'Sign in as an organization admin to create staff invites.', 401)
   try {
   const organization = (await pool.query(`SELECT o.* FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id" WHERE m."authUserId" = $1 AND m."role" = 'ADMIN' LIMIT 1`, [session.user.id])).rows[0]
@@ -16,7 +17,12 @@ export async function POST() {
   const token = randomBytes(32).toString('base64url')
   const tokenHash = createHash('sha256').update(token).digest('hex')
   await pool.query(`INSERT INTO "OrganizationInvite" ("id", "organizationId", "email", "role", "tokenHash", "expiresAt") VALUES ($1,$2,$3,'STAFF',$4,NOW() + INTERVAL '7 days')`, [crypto.randomUUID(), organization.id, session.user.email, tokenHash])
-  return apiSuccess({ url: `${process.env.V0_RUNTIME_URL || ''}/staff/invite/${token}`, code: 'INVITE_CREATED', remaining: Math.max(limit - used, 0) })
+  const forwardedProto = requestHeaders.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const forwardedHost = requestHeaders.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const host = forwardedHost || requestHeaders.get('host')
+  const origin = host ? `${forwardedProto || 'https'}://${host}` : (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : process.env.V0_RUNTIME_URL)
+  const url = new URL(`/staff/invite/${token}`, origin || 'http://localhost:3000').toString()
+  return apiSuccess({ url, code: 'INVITE_CREATED', remaining: Math.max(limit - used, 0) })
   } catch (error) {
     return internalApiError(error)
   }
