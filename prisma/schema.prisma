@@ -95,6 +95,7 @@ model Opportunity {
   organizationId String?
   name         String
   company      String
+  industry     String?
   email        String
   website      String?
   companyAddress String?
