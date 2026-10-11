@@ -70,7 +70,7 @@ export default function Page() {
             {navigation.map((item) => {
               const Icon = item.icon
               const active = activeNav === item.label
-              return item.label === 'Leads' ? <a key={item.label} href="/dashboard/leads" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#77736c] transition hover:bg-[#f4f1ea]"><Icon className="size-[17px]" />{item.label}</a> : <button key={item.label} onClick={() => setActiveNav(item.label)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${active ? 'bg-[#f0ede5] font-semibold text-[#1b1b1b]' : 'text-[#77736c] hover:bg-[#f4f1ea]'}`}><Icon className="size-[17px]" />{item.label}</button>
+              return item.label === 'Leads' || item.label === 'Pipeline' ? <a key={item.label} href={item.label === 'Leads' ? '/dashboard/leads' : '/dashboard/pipeline'} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#77736c] transition hover:bg-[#f4f1ea]"><Icon className="size-[17px]" />{item.label}</a> : <button key={item.label} onClick={() => setActiveNav(item.label)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${active ? 'bg-[#f0ede5] font-semibold text-[#1b1b1b]' : 'text-[#77736c] hover:bg-[#f4f1ea]'}`}><Icon className="size-[17px]" />{item.label}</button>
             })}
             <div className="my-6 h-px bg-[#e7e4dc]" />
             <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#a19c91]">Manage</p>
