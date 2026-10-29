@@ -77,8 +77,8 @@ export async function POST(request: Request) {
     try {
       await client.query('BEGIN')
       await client.query(
-        'INSERT INTO "Organization" ("id", "name", "slug", "contactEmail", "industry", "size", "staffCount", "primaryGoal", "monthlyProjection", "status", "plan") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
-        [organizationId, companyName, slug, session.user.email, industry, String(staffCount), staffCount, primaryGoal, monthlyProjection, status, selected.plan],
+        'INSERT INTO "Organization" ("id", "name", "slug", "contactEmail", "industry", "size", "staffCount", "primaryGoal", "monthlyProjection", "status", "plan", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
+        [organizationId, companyName, slug, session.user.email, industry, String(staffCount), staffCount, primaryGoal, monthlyProjection, status, selected.plan, now],
       )
       await client.query(
         'INSERT INTO "OrganizationMember" ("id", "organizationId", "authUserId", "role", "status") VALUES ($1,$2,$3,$4,$5)',
