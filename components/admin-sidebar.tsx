@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, CircleHelp, ClipboardList, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users } from 'lucide-react'
+import { CalendarDays, CircleHelp, ClipboardList, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users } from 'lucide-react'
 import { InviteLinkButton } from '@/components/invite-link-button'
 
 const workspaceLinks = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+  { label: 'Leads', href: '/admin/leads', icon: ContactRound },
   { label: 'Tasks', href: '/admin/tasks', icon: ClipboardList, badge: '12+' },
   { label: 'Calendar', href: '/admin/calendar', icon: CalendarDays },
   { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
@@ -37,15 +38,17 @@ function SidebarLink({ label, href, icon: Icon, badge }: { label: string; href: 
   )
 }
 
-export function AdminSidebar() {
+export function AdminSidebar({ userName, userEmail, organizationName }: { userName?: string; userEmail?: string; organizationName?: string } = {}) {
   return (
     <aside className="hidden w-[220px] shrink-0 flex-col rounded-[24px] border border-[#d6deea] bg-white p-5 shadow-[0_10px_30px_rgba(20,34,28,0.035)] lg:flex">
       <Link href="/admin" className="flex items-center gap-3 px-2" aria-label="Dara admin dashboard">
         <span className="flex size-9 items-center justify-center rounded-full border-[3px] border-[#07121f] text-[#07121f]"><span className="size-3 rounded-full bg-[#07121f]" /></span>
-        <span className="text-lg font-bold tracking-tight">Dara</span>
+        <span className="font-serif text-lg font-bold tracking-tight">Dara</span>
       </Link>
 
-      <p className="mb-3 mt-12 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#657286]">Workspace</p>
+      {userName && <div className="mt-5 rounded-[20px] bg-[#07121f] p-4 text-white"><span className="flex size-9 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-[#a5f36c]">{userName.split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase()}</span><p className="mt-3 truncate font-serif text-sm font-semibold">{organizationName || 'Dara workspace'}</p><p className="mt-1 truncate text-[10px] text-[#d6deea]">{userName}</p>{userEmail && <p className="mt-0.5 truncate text-[9px] text-[#d6deea]/75">{userEmail}</p>}</div>}
+
+      <p className="mb-3 mt-7 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#657286]">Workspace</p>
       <nav aria-label="Workspace navigation" className="space-y-1">
         {workspaceLinks.map((link) => <SidebarLink key={link.href} {...link} />)}
       </nav>
