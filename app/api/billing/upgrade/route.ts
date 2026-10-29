@@ -5,8 +5,8 @@ import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
 
 const plans = {
-  TEAM: { amount: 500000, label: 'Sequoia Team' },
-  GROWTH: { amount: 700000, label: 'Sequoia Growth' },
+  TEAM: { amount: 500000, label: 'Dara Team' },
+  GROWTH: { amount: 700000, label: 'Dara Growth' },
 } as const
 
 export async function POST(request: Request) {

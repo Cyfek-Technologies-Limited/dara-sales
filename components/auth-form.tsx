@@ -51,15 +51,15 @@ export function AuthForm({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     setPending(false)
   }
 
-  return <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[#e1d9c5] bg-[#f4edda] p-7 text-[#171716] shadow-2xl">
-    <div><a href="/" className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f15b35]">Sequoia</a><h1 className="mt-3 font-serif text-4xl font-normal">{mode === 'sign-in' ? 'Welcome back.' : 'Create your workspace.'}</h1><p className="mt-2 text-sm text-[#6d6a60]">{mode === 'sign-in' ? 'Sign in to your sales workspace.' : 'Create a company workspace and invite your sales team privately.'}</p></div>
-    {mode === 'sign-up' && <input name="name" required placeholder="Your name" className="rounded-xl border border-[#d7cdb6] bg-[#fffaf0] px-4 py-3 outline-none" />}
-    <input name="email" type="email" required placeholder="Work email" className="rounded-xl border border-[#d7cdb6] bg-[#fffaf0] px-4 py-3 outline-none" />
-    <input name="password" type="password" minLength={8} required placeholder="Password" className="rounded-xl border border-[#d7cdb6] bg-[#fffaf0] px-4 py-3 outline-none" />
+  return <form onSubmit={submit} className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[#d6deea] bg-[#f4f6f9] p-7 text-[#111827] shadow-2xl">
+    <div><a href="/" className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5366df]">Dara</a><h1 className="mt-3 font-serif text-4xl font-normal">{mode === 'sign-in' ? 'Welcome back.' : 'Create your workspace.'}</h1><p className="mt-2 text-sm text-[#596579]">{mode === 'sign-in' ? 'Sign in to your sales workspace.' : 'Create a company workspace and invite your sales team privately.'}</p></div>
+    {mode === 'sign-up' && <input name="name" required placeholder="Your name" className="rounded-xl border border-[#d6deea] bg-[#ffffff] px-4 py-3 outline-none" />}
+    <input name="email" type="email" required placeholder="Work email" className="rounded-xl border border-[#d6deea] bg-[#ffffff] px-4 py-3 outline-none" />
+    <input name="password" type="password" minLength={8} required placeholder="Password" className="rounded-xl border border-[#d6deea] bg-[#ffffff] px-4 py-3 outline-none" />
     {error && <p role="alert" className="text-sm text-[#b43825]">{error}</p>}
-    <button disabled={pending} className="rounded-full bg-[#f15b35] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{pending ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Create workspace'}</button>
-    <div className="flex items-center gap-3 text-xs text-[#8b867d]"><span className="h-px flex-1 bg-[#d7cdb6]" />or<span className="h-px flex-1 bg-[#d7cdb6]" /></div>
-    <button type="button" onClick={continueWithGoogle} disabled={pending} className="rounded-full border border-[#cfc4aa] px-5 py-3 text-sm font-semibold disabled:opacity-60">Continue with Google</button>
+    <button disabled={pending} className="rounded-full bg-[#5366df] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{pending ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Create workspace'}</button>
+    <div className="flex items-center gap-3 text-xs text-[#657286]"><span className="h-px flex-1 bg-[#d6deea]" />or<span className="h-px flex-1 bg-[#d6deea]" /></div>
+    <button type="button" onClick={continueWithGoogle} disabled={pending} className="rounded-full border border-[#d6deea] px-5 py-3 text-sm font-semibold disabled:opacity-60">Continue with Google</button>
     <a href={mode === 'sign-in' ? '/sign-up' : '/sign-in'} className="text-center text-xs underline">{mode === 'sign-in' ? 'Create a company workspace' : 'Already have an account? Sign in'}</a>
   </form>
 }
