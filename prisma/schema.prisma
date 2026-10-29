@@ -28,6 +28,8 @@ model Organization {
   invitations       OrganizationInvite[]
   opportunities     Opportunity[]
   activities        Activity[]
+  salesLeads        SalesLead[]
+  salesOutreach     SalesOutreach[]
 
   @@index([status])
   @@schema("public")
@@ -140,5 +142,49 @@ model StaffPerformance {
 
   @@unique([organizationId, authUserId, periodStart, periodEnd])
   @@index([organizationId, periodEnd])
+  @@schema("public")
+}
+
+model SalesLead {
+  id                   String         @id @default(cuid())
+  organizationId       String
+  ownerId              String
+  businessName         String
+  contactName          String?
+  email                String?
+  phone                String?
+  industry             String?
+  website              String?
+  source               String?
+  stage                String         @default("LEAD")
+  advertiserSpend      Decimal        @default(0) @db.Decimal(12, 2)
+  campaignSuccessfulAt DateTime?
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  organization         Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  outreach             SalesOutreach[]
+
+  @@index([organizationId, ownerId, stage])
+  @@index([ownerId, createdAt])
+  @@schema("public")
+}
+
+model SalesOutreach {
+  id             String       @id @default(cuid())
+  organizationId String
+  leadId         String
+  ownerId        String
+  channel        String
+  platform       String?
+  note           String?
+  outcome        String?
+  occurredAt     DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead           SalesLead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, occurredAt])
+  @@index([ownerId, occurredAt])
+  @@index([leadId, occurredAt])
   @@schema("public")
 }
