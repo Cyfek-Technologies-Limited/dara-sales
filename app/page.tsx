@@ -136,68 +136,78 @@ function SectionEyebrow({
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f4f6f9] text-[#111827]">
-      <div className="bg-[#06101c] px-3 py-3 sm:px-6 sm:py-6">
-        <section
-          id="product"
-          aria-label="Manage your sales team"
-          className="relative mx-auto flex min-h-[min(850px,92vh)] max-w-[1400px] flex-col overflow-hidden rounded-[24px] bg-cover bg-center text-white"
-          style={{ backgroundImage: "url('/luminous-waves-deep-navy.png')" }}
-        >
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-[#03101c]/25"
-          />
-          <header className="relative z-20 flex h-[68px] items-center justify-between px-5 sm:px-8 lg:px-12">
+    <main className="min-h-screen overflow-hidden  text-[#111827]">
+      <section
+        id="product"
+        // aria-label="Dara business management"
+        className="relative h-screen mx-auto flex min-h-[min(900px,94vh)] w-full flex-col overflow-hidden bg-[#06101c] bg-cover lg:bg-left text-white lg:bg-[length:80%_auto] lg:bg-right lg:bg-no-repeat"
+        style={{ backgroundImage: "url('/dara-team-banner.png')" }}
+      >
+        {/* <div aria-hidden="true" className="absolute inset-0 bg-[#06101c]/35" /> */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-[#06101c]/45 via-[#06101c]/10 to-[#06101c]/30"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 left-[10%] hidden w-[35%] bg-gradient-to-r from-[#06101c] via-[#06101c]/80 to-transparent lg:block"
+        />
+        <header className="relative z-20 flex h-24 items-center justify-between px-6 sm:h-28 sm:px-[7.5%]">
+          <nav className="flex items-center gap-5 text-sm text-white/90 sm:gap-10 sm:text-lg lg:gap-14">
+            <a href="#product" className="transition hover:text-white">
+              Home
+            </a>
+            <a href="#solutions" className="transition hover:text-white">
+              Team
+            </a>
+            <a href="#footer" className="transition hover:text-white">
+              Contacts
+            </a>
             <Link
-              href="/"
-              aria-label="Dara home"
-              className="flex size-9 items-center justify-center rounded-full bg-white text-xl font-black tracking-[-0.12em] text-[#07121f]"
+              href="/sign-up"
+              className="font-semibold text-white transition hover:text-white/75"
             >
-              D<span className="text-[#5366df]">.</span>
+              Join
             </Link>
-            <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 text-[14px] text-white/80 sm:flex">
-              <a className="text-white" href="#product">
-                Business
-              </a>
-              <a href="#pricing">Pricing</a>
-              <a href="#solutions">Features</a>
-              <a href="#workflow">About</a>
-            </nav>
-            <Link
-              href="/sign-in"
-              className="rounded-full border border-white/15 bg-white/[0.08] px-5 py-2.5 text-[11px] font-medium text-white backdrop-blur-sm transition hover:bg-white/15"
+          </nav>
+          <div className="flex items-center gap-4 sm:gap-8">
+            <a
+              href="#workflow"
+              className="hidden text-sm text-white/90 transition hover:text-white sm:inline lg:text-lg"
             >
-              Login
-            </Link>
-          </header>
-          <div className="relative z-10 mx-auto flex w-full flex-1 flex-col items-center justify-center px-5 pb-28 pt-10 text-center sm:pb-36">
-            <h1 className="max-w-[850px] text-[clamp(2.5rem,6vw,5.5rem)] font-semibold leading-[1.02] tracking-[-0.055em] drop-shadow-[0_2px_18px_rgba(0,0,0,0.35)]">
-              Manage your sales team
-              <br className="hidden sm:block" /> with{" "}
-              <span className="text-[#a5f36c]">clarity.</span>
-            </h1>
-            <p className="mt-6 max-w-[570px] text-[13px] leading-6 text-white/75 sm:text-[15px] sm:leading-7">
-              Set clear goals, keep every follow-up moving, and understand the
-              work behind your team&apos;s results — all in one place.
-            </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
-              <Link
-                href="/sign-up"
-                className="inline-flex min-w-[150px] items-center justify-center gap-2 rounded-full bg-[#a5f36c] px-6 py-3 text-xs font-semibold text-[#07121b] shadow-[0_0_30px_rgba(165,243,108,0.24)] transition hover:bg-[#b7ff80]"
-              >
-                How it works <ArrowRight className="size-4" />
-              </Link>
-              <Link
-                href="#solutions"
-                className="inline-flex min-w-[150px] items-center justify-center rounded-full border border-white/20 bg-[#091521]/45 px-6 py-3 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-white/10"
-              >
-                Book Demo
-              </Link>
-            </div>
+              Company
+            </a>
+            <a
+              href="#footer"
+              aria-label="More site links"
+              className="flex size-10 flex-col items-center justify-center gap-1.5 rounded-lg transition hover:bg-white/10"
+            >
+              <span className="h-1 w-7 rounded-full bg-[#8ec5ff]" />
+              <span className="h-1 w-7 rounded-full bg-[#8ec5ff]" />
+              <span className="h-1 w-7 rounded-full bg-[#8ec5ff]" />
+            </a>
           </div>
-        </section>
-      </div>
+        </header>
+
+        <div className="relative z-10 flex flex-1 items-center px-6 pb-16 sm:px-[7.5%] sm:pb-20">
+          <div className="max-w-[690px]">
+            <h1 className="lg:text-[4.5rem] text-[3rem] font-bold leading-[1.1] tracking-[-0.085em]">
+              Manage your sales team with clarity.
+            </h1>
+            <p className="mt-7 max-w-[550px] text-sm leading-7 text-white/80 sm:mt-9 sm:text-base sm:leading-7">
+              Bring your sales team, customer relationships, and follow-ups
+              together. Dara gives you a clearer way to manage the work that
+              moves your business forward.
+            </p>
+            <Link
+              href="/sign-up"
+              className="mt-8 inline-flex min-w-[190px] items-center justify-center rounded-full border-[3px] border-white px-8 py-3.5 text-sm font-bold tracking-wide text-white transition hover:bg-white hover:text-[#2638b8] sm:mt-10 sm:min-w-[230px] sm:py-4 sm:text-lg"
+            >
+              GET STARTED
+            </Link>
+          </div>
+        </div>
+      </section>
       {/* 1. The problem: make visitors recognize their situation */}
       <section
         id="solutions"
@@ -662,7 +672,10 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#f4f6f9] px-8 py-10 sm:px-14 lg:px-[10%]">
+      <footer
+        id="footer"
+        className="bg-[#f4f6f9] px-8 py-10 sm:px-14 lg:px-[10%]"
+      >
         <div className="flex flex-col gap-8 border-b border-[#d6deea] pb-8 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <Link
