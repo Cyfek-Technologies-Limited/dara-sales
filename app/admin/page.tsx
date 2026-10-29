@@ -1,8 +1,9 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { Bell, CalendarDays, CheckCircle2, ChevronRight, CircleHelp, ClipboardList, LayoutDashboard, LogOut, Mail, Menu, Plus, Search, Settings, Sparkles, Target, TrendingUp, UserRound, Users, X, Zap } from 'lucide-react'
+import { Bell, CalendarDays, CheckCircle2, ChevronRight, Mail, Menu, Plus, Search, Target, TrendingUp, Users, Zap } from 'lucide-react'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
+import { AdminSidebar } from '@/components/admin-sidebar'
 import { InviteLinkButton } from '@/components/invite-link-button'
 import { UpgradePlanButton } from '@/components/upgrade-plan-button'
 
@@ -24,19 +25,10 @@ export default async function AdminDashboard() {
   const staffLimit = Number(organization.staffCount || 0)
   const planExceeded = staffLimit > 0 && staff.length >= staffLimit
   const adminName = session.user.name || 'Admin'
-  const nav = [{ label: 'Dashboard', href: '/admin', icon: LayoutDashboard, active: true }, { label: 'Tasks', href: '/admin/tasks', icon: ClipboardList, badge: '12+' }, { label: 'Calendar', href: '/admin/calendar', icon: CalendarDays }, { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp }, { label: 'Team', href: '/admin/team', icon: Users }]
-
   return (
     <main className="min-h-screen bg-[#f4f6f9] text-[#07121f]">
       <div className="flex min-h-screen gap-3 p-3 md:p-4">
-        <aside className="hidden w-[220px] shrink-0 flex-col rounded-[24px] border border-[#d6deea] bg-[#ffffff] shadow-[0_10px_30px_rgba(20,34,28,0.035)] p-5 lg:flex">
-          <div className="flex items-center gap-3 px-2"><div className="flex size-9 items-center justify-center rounded-full border-[3px] border-[#07121f] text-[#07121f]"><span className="size-3 rounded-full bg-[#07121f]" /></div><span className="text-lg font-bold tracking-tight">Dara</span></div>
-          <p className="mb-3 mt-12 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#657286]">Workspace</p>
-          <nav className="space-y-1">{nav.map(({ label, href, icon: Icon, active, badge }) => <a key={label} href={href} className={`relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium ${active ? 'bg-[#e9eef5] text-[#07121f]' : 'text-[#657286] hover:bg-[#e9eef5]'}`}><Icon className="size-[17px]" strokeWidth={1.8} />{label}{badge && <span className="ml-auto rounded bg-[#07121f] px-1.5 py-0.5 text-[9px] font-bold text-white">{badge}</span>}</a>)}</nav>
-          <p className="mb-3 mt-10 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#657286]">General</p>
-          <nav className="space-y-1"><a href="/admin/settings" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-[#657286] hover:bg-[#e9eef5]"><Settings className="size-[17px]" />Settings</a><a href="/admin/help" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-[#657286] hover:bg-[#e9eef5]"><CircleHelp className="size-[17px]" />Help</a><a href="/sign-in" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-[#657286]"><LogOut className="size-[17px]" />Logout</a></nav>
-          <div className="mt-auto overflow-hidden rounded-2xl bg-[#a83f28] p-4 text-white"><Sparkles className="mb-5 size-5 text-[#e9eef5]" /><p className="text-sm font-semibold leading-5">Grow your team with Dara</p><p className="mt-1 text-[11px] leading-4 text-[#a5f36c]">Invite your sales staff and track every win.</p><InviteLinkButton /></div>
-        </aside>
+        <AdminSidebar />
         <section className="min-w-0 flex-1 rounded-[24px] border border-[#d6deea] bg-[#ffffff] shadow-[0_10px_30px_rgba(20,34,28,0.035)] px-4 py-4 sm:px-7 sm:py-5">
           <header className="flex items-center justify-between border-b border-[#e9eef5] pb-4"><div className="flex items-center gap-3"><button className="rounded-lg p-2 text-[#657286] lg:hidden"><Menu className="size-5" /></button><div className="hidden items-center gap-2 rounded-full bg-[#e9eef5] px-3 py-2 text-xs text-[#657286] sm:flex"><Search className="size-3.5" />Search workspace <kbd className="ml-8 rounded bg-white px-1.5 py-0.5 text-[10px]">⌘F</kbd></div></div><div className="flex items-center gap-4"><Mail className="hidden size-[18px] text-[#657286] sm:block" /><Bell className="size-[18px] text-[#657286]" /><div className="flex items-center gap-2 border-l border-[#d6deea] pl-4"><div className="flex size-9 items-center justify-center rounded-full bg-[#e9eef5] text-xs font-bold text-[#07121f]">{initials(adminName)}</div><div className="hidden sm:block"><p className="text-xs font-bold">{adminName}</p><p className="text-[10px] text-[#657286]">{session.user.email}</p></div></div></div></header>
           <div className="py-6"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="mb-2 text-xs text-[#657286]">{organization.name} / Overview</p><h1 className="text-[32px] font-semibold tracking-[-0.04em] text-[#07121f]">Dashboard</h1><p className="mt-1 text-sm text-[#657286]">Plan, prioritize and accomplish your sales goals with ease.</p></div><div className="flex flex-wrap gap-2">{planExceeded && <UpgradePlanButton currentPlan={organization.plan || 'FREE'} />}<InviteLinkButton /><button className="inline-flex items-center gap-2 rounded-full border border-[#a5f36c] bg-white px-4 py-2.5 text-xs font-semibold text-[#07121f] hover:bg-[#e9eef5]"><Plus className="size-3.5" />Add project</button></div></div>
