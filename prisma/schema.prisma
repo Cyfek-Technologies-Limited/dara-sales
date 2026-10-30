@@ -24,6 +24,7 @@ model Organization {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   members           OrganizationMember[]
+  industries        Industry[]
   subscriptions     Subscription[]
   invitations       OrganizationInvite[]
   opportunities     Opportunity[]
@@ -41,14 +42,43 @@ model OrganizationMember {
   authUserId     String
   role           String       @default("STAFF")
   jobTitle       String?
+  industryId     String?
   status         String       @default("ACTIVE")
   joinedAt       DateTime     @default(now())
   lastActiveAt   DateTime?
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  industry       Industry?    @relation(fields: [industryId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, authUserId])
   @@index([authUserId])
   @@index([organizationId, role])
+  @@schema("public")
+}
+
+model Industry {
+  id             String               @id @default(cuid())
+  organizationId String
+  name           String
+  createdAt      DateTime             @default(now())
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        OrganizationMember[]
+  categories     IndustryCategory[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@schema("public")
+}
+
+model IndustryCategory {
+  id         String     @id @default(cuid())
+  industryId String
+  name       String
+  createdAt  DateTime   @default(now())
+  industry   Industry  @relation(fields: [industryId], references: [id], onDelete: Cascade)
+  salesLeads SalesLead[]
+
+  @@unique([industryId, name])
+  @@index([industryId])
   @@schema("public")
 }
 
@@ -154,6 +184,7 @@ model SalesLead {
   email                String?
   phone                String?
   industry             String?
+  industryCategoryId   String?
   website              String?
   source               String?
   stage                String         @default("LEAD")
@@ -163,10 +194,12 @@ model SalesLead {
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
   organization         Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  industryCategory    IndustryCategory? @relation(fields: [industryCategoryId], references: [id], onDelete: SetNull)
   outreach             SalesOutreach[]
 
   @@index([organizationId, ownerId, stage])
   @@index([ownerId, createdAt])
+  @@index([industryCategoryId, stage])
   @@schema("public")
 }
 

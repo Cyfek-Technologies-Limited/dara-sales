@@ -9,7 +9,7 @@ import { DashboardSidebar } from '@/components/dashboard-sidebar'
 import { RecentLeadRow, SalesStageTracker, type RecentLead, type SalesStageCounts } from '@/components/sales-dashboard-widgets'
 
 export type DashboardData = {
-  user: { name: string; email: string; jobTitle: string }
+  user: { name: string; email: string; jobTitle: string; industry: string | null }
   organizationName: string
   leadsCreated: number
   qualifiedLeads: number
@@ -45,13 +45,15 @@ export default function DashboardContent({ data }: { data: DashboardData }) {
   return (
     <main className="min-h-screen bg-[#f4f6f9] p-3 text-[#07121f] md:p-4">
       <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
-        <DashboardSidebar role="STAFF" userName={data.user.name} userEmail={data.user.email} organizationName={data.organizationName} jobTitle={data.user.jobTitle} />
+        <DashboardSidebar role="STAFF" userName={data.user.name} userEmail={data.user.email} organizationName={data.organizationName} jobTitle={data.user.jobTitle} industry={data.user.industry} />
 
         <section className="min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-4 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 sm:py-6">
           <header className="flex items-center justify-between border-b-[1px] border-black/30 pb-4"><div className="flex items-center gap-3"><button aria-label="Open navigation" className="lg:hidden"><Menu className="size-5" /></button><div><p className="text-[11px] text-[#657286]">{today}</p><h1 className="mt-1 font-serif text-xl font-semibold">Good morning, {firstName}</h1></div></div><div className="flex items-center gap-2"><button aria-label="Help center" className="hidden rounded-full border-[1px] border-black/30 bg-white p-2.5 text-[#657286] sm:block"><CircleHelp className="size-4" /></button><button aria-label="Notifications" className="rounded-full border-[1px] border-black/30 bg-white p-2.5 text-[#657286]"><Bell className="size-4" /></button><button onClick={() => setMenuOpen(!menuOpen)} aria-label="Account menu" className="flex items-center gap-2 rounded-full border-[1px] border-black/30 bg-white p-1.5"><span className="flex size-7 items-center justify-center rounded-full bg-[#07121f] text-[10px] font-bold text-white">{initials(data.user.name)}</span><ChevronDown className="mr-1 size-3.5 text-[#657286]" /></button></div></header>
           {menuOpen && <div className="absolute right-7 top-[76px] z-20 rounded-xl border-[1px] border-black/30 bg-white p-3 shadow-lg"><p className="px-2 pb-2 text-xs font-semibold">{data.user.email}</p><button onClick={signOut} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-[#657286] hover:bg-[#f4f6f9]"><LogOut className="size-4" />Sign out</button></div>}
 
           <div className="py-6"><div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs text-[#657286]">{data.organizationName} · {data.user.jobTitle}</p><h2 className="mt-1 font-serif text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Your sales desk</h2><p className="mt-1 text-sm text-[#657286]">Turn today&apos;s conversations into tomorrow&apos;s clients.</p></div><Link href="/dashboard/leads" className="flex w-fit items-center gap-2 rounded-full bg-[#07121f] px-4 py-2.5 text-xs font-semibold text-white">Record outreach <ArrowRight className="size-3.5" /></Link></div>
+
+            <div className="mb-5 rounded-2xl border-[1px] border-black/30 bg-white p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#657286]">Your assigned industry</p><p className="mt-1 font-semibold">{data.user.industry || 'Not assigned yet'}</p><p className="mt-1 text-xs text-[#657286]">{data.user.industry ? `Focus your prospect research and outreach on ${data.user.industry}.` : 'Ask your admin to assign an industry before starting new prospect research.'}</p></div>
 
             <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[
               { label: 'Outreach today', value: `${data.outreachToday}/${data.dailyTarget}`, detail: `${Math.max(data.dailyTarget - data.outreachToday, 0)} to daily goal`, icon: Target, featured: true },

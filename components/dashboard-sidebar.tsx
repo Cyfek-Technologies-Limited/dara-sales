@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { CalendarDays, CircleHelp, ClipboardList, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target } from 'lucide-react'
+import { CircleHelp, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target, Tags } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { InviteLinkButton } from '@/components/invite-link-button'
 
@@ -11,10 +11,9 @@ type DashboardRole = 'ADMIN' | 'STAFF'
 const adminWorkspaceLinks = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Leads', href: '/admin/leads', icon: ContactRound },
-  { label: 'Tasks', href: '/admin/tasks', icon: ClipboardList, badge: '12+' },
-  { label: 'Calendar', href: '/admin/calendar', icon: CalendarDays },
   { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
   { label: 'Team', href: '/admin/team', icon: Users },
+  { label: 'Industries', href: '/admin/industries', icon: Tags },
 ]
 
 const staffWorkspaceLinks = [
@@ -35,12 +34,14 @@ export function DashboardSidebar({
   userEmail,
   organizationName,
   jobTitle,
+  industry,
 }: {
   role: DashboardRole
   userName: string
   userEmail: string
   organizationName: string
   jobTitle?: string
+  industry?: string | null
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -65,6 +66,7 @@ export function DashboardSidebar({
         <p className="mt-1 truncate text-[10px] text-[#d6deea]">{userName}</p>
         <p className="mt-0.5 truncate text-[9px] text-[#d6deea]/75">{userEmail}</p>
         {jobTitle && <span className="mt-3 inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[9px] text-[#a5f36c]">{jobTitle}</span>}
+        {role === 'STAFF' && <span className="mt-2 inline-flex max-w-full rounded-full bg-white/10 px-2.5 py-1 text-[9px] text-[#a5f36c]">{industry || 'Industry not assigned'}</span>}
       </div>
 
       <p className="mb-3 mt-7 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#657286]">Workspace</p>

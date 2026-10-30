@@ -9,8 +9,9 @@ export default async function DashboardPage() {
   if (!session?.user) redirect('/sign-in')
 
   const membership = (await pool.query(
-    `SELECT m."organizationId", m."jobTitle", o."name" AS "organizationName"
+    `SELECT m."organizationId", m."jobTitle", i."name" AS "industryName", o."name" AS "organizationName"
      FROM "OrganizationMember" m JOIN "Organization" o ON o."id" = m."organizationId"
+     LEFT JOIN "Industry" i ON i."id" = m."industryId"
      WHERE m."authUserId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
      ORDER BY m."joinedAt" DESC LIMIT 1`,
     [session.user.id],
@@ -57,7 +58,7 @@ export default async function DashboardPage() {
 
   const metrics = metricsResult.rows[0]
   const data: DashboardData = {
-    user: { name: session.user.name || session.user.email, email: session.user.email, jobTitle: membership.jobTitle || 'Sales team member' },
+    user: { name: session.user.name || session.user.email, email: session.user.email, jobTitle: membership.jobTitle || 'Sales team member', industry: membership.industryName || null },
     organizationName: membership.organizationName,
     leadsCreated: Number(metrics.leadsCreated),
     qualifiedLeads: Number(metrics.qualifiedLeads),

@@ -12,6 +12,7 @@ type LeadRow = {
   email: string | null
   phone: string | null
   industry: string | null
+  categoryName: string | null
   website: string | null
   stage: string
   advertiserSpend: string
@@ -29,8 +30,9 @@ export default async function AllLeadsPage() {
   if (!session?.user) redirect('/sign-in')
 
   const member = (await pool.query(
-    `SELECT m."organizationId", m."jobTitle", o."name" AS "organizationName"
+    `SELECT m."organizationId", m."jobTitle", i."name" AS "industryName", o."name" AS "organizationName"
      FROM "OrganizationMember" m JOIN "Organization" o ON o."id" = m."organizationId"
+     LEFT JOIN "Industry" i ON i."id" = m."industryId"
      WHERE m."authUserId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
      ORDER BY m."joinedAt" DESC LIMIT 1`,
     [session.user.id],
@@ -38,10 +40,11 @@ export default async function AllLeadsPage() {
   if (!member) redirect('/sign-in')
 
   const leads = (await pool.query(
-    `SELECT l."id", l."businessName", l."contactName", l."email", l."phone", l."industry", l."website",
+    `SELECT l."id", l."businessName", l."contactName", l."email", l."phone", l."industry", c."name" AS "categoryName", l."website",
             l."stage", l."advertiserSpend"::text AS "advertiserSpend", l."createdAt",
             recent."lastOutreachAt", COALESCE(recent."outreachCount", 0)::int AS "outreachCount"
      FROM "SalesLead" l
+     LEFT JOIN "IndustryCategory" c ON c."id" = l."industryCategoryId"
      LEFT JOIN LATERAL (
        SELECT MAX(s."occurredAt") AS "lastOutreachAt", COUNT(*)::int AS "outreachCount"
        FROM "SalesOutreach" s WHERE s."leadId" = l."id" AND s."ownerId" = $2
@@ -54,7 +57,7 @@ export default async function AllLeadsPage() {
   return (
     <main className="min-h-screen bg-[#f4f6f9] p-3 text-[#07121f] md:p-4">
       <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
-        <DashboardSidebar role="STAFF" userName={session.user.name || session.user.email} userEmail={session.user.email} organizationName={member.organizationName} jobTitle={member.jobTitle || 'Sales team member'} />
+    <DashboardSidebar role="STAFF" userName={session.user.name || session.user.email} userEmail={session.user.email} organizationName={member.organizationName} jobTitle={member.jobTitle || 'Sales team member'} industry={member.industryName || null} />
         <section className="min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-5 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 md:py-7">
           <header className="flex flex-col justify-between gap-4 border-b-[1px] border-black/30 pb-5 sm:flex-row sm:items-end">
             <div>
@@ -71,7 +74,7 @@ export default async function AllLeadsPage() {
               <table className="w-full min-w-[850px] text-left text-xs">
                 <thead className="bg-[#f4f6f9] text-[10px] uppercase tracking-[0.12em] text-[#657286]"><tr><th className="px-5 py-3">Business / contact</th><th className="px-5 py-3">Stage</th><th className="px-5 py-3">Outreach</th><th className="px-5 py-3">Last contacted</th><th className="px-5 py-3">Advertiser spend</th></tr></thead>
                 <tbody className="divide-y divide-black/30">{leads.map((lead) => <tr key={lead.id}>
-                  <td className="px-5 py-4"><p className="font-semibold">{lead.businessName}</p><p className="mt-1 text-[11px] text-[#657286]">{lead.contactName || 'Contact not added'}{lead.industry ? ` · ${lead.industry}` : ''}</p><p className="mt-1 text-[11px] text-[#657286]">{[lead.email, lead.phone].filter(Boolean).join(' · ') || 'No contact details'}</p>{lead.website && <a className="mt-1 inline-block text-[11px] underline" href={lead.website} target="_blank" rel="noreferrer">Website</a>}</td>
+                  <td className="px-5 py-4"><p className="font-semibold">{lead.businessName}</p><p className="mt-1 text-[11px] text-[#657286]">{lead.contactName || 'Contact not added'}{lead.industry ? ` · ${lead.industry}` : ''}{lead.categoryName ? ` · ${lead.categoryName}` : ''}</p><p className="mt-1 text-[11px] text-[#657286]">{[lead.email, lead.phone].filter(Boolean).join(' · ') || 'No contact details'}</p>{lead.website && <a className="mt-1 inline-block text-[11px] underline" href={lead.website} target="_blank" rel="noreferrer">Website</a>}</td>
                   <td className="px-5 py-4"><span className="rounded-full bg-[#e9eef5] px-3 py-1.5 text-[10px] font-semibold">{stageLabel(lead.stage)}</span></td>
                   <td className="px-5 py-4 font-medium">{lead.outreachCount} {lead.outreachCount === 1 ? 'touch' : 'touches'}</td>
                   <td className="px-5 py-4 text-[#657286]">{dateLabel(lead.lastOutreachAt)}</td>

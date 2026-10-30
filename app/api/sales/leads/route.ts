@@ -9,12 +9,13 @@ async function getStaff() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) return null
   const member = (await pool.query(
-    `SELECT "organizationId" FROM "OrganizationMember"
-     WHERE "authUserId" = $1 AND "role" = 'STAFF' AND "status" = 'ACTIVE'
-     ORDER BY "joinedAt" DESC LIMIT 1`,
+    `SELECT m."organizationId", m."industryId", i."name" AS "industryName" FROM "OrganizationMember" m
+     LEFT JOIN "Industry" i ON i."id" = m."industryId"
+     WHERE m."authUserId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
+     ORDER BY m."joinedAt" DESC LIMIT 1`,
     [session.user.id],
   )).rows[0]
-  return member ? { userId: session.user.id, organizationId: member.organizationId } : null
+  return member ? { userId: session.user.id, organizationId: member.organizationId, industryId: member.industryId as string | null, industryName: member.industryName as string | null } : null
 }
 
 export async function GET() {
@@ -43,21 +44,31 @@ export async function GET() {
 export async function POST(request: Request) {
   const staff = await getStaff()
   if (!staff) return NextResponse.json({ error: 'Sign in with an active staff account.' }, { status: 401 })
+  if (!staff.industryName) return NextResponse.json({ error: 'Your admin must assign an industry before you can add leads.' }, { status: 409 })
   const body = await request.json().catch(() => ({}))
   const businessName = typeof body.businessName === 'string' ? body.businessName.trim() : ''
   const channel = typeof body.channel === 'string' ? body.channel.toUpperCase() : ''
-  if (!businessName || businessName.length > 160 || !channels.includes(channel)) {
-    return NextResponse.json({ error: 'Enter a business name and choose how you reached out.' }, { status: 400 })
+  const industryCategoryId = typeof body.industryCategoryId === 'string' ? body.industryCategoryId : ''
+  if (!businessName || businessName.length > 160 || !channels.includes(channel) || !industryCategoryId) {
+    return NextResponse.json({ error: 'Enter a business name, choose a subcategory, and choose how you reached out.' }, { status: 400 })
   }
+
+  const category = (await pool.query(
+    `SELECT c."id", (SELECT COUNT(*)::int FROM "IndustryCategory" WHERE "industryId" = c."industryId") AS "categoryCount"
+     FROM "IndustryCategory" c WHERE c."id" = $1 AND c."industryId" = $2`,
+    [industryCategoryId, staff.industryId],
+  )).rows[0]
+  if (!category) return NextResponse.json({ error: 'Choose a subcategory under your assigned industry.' }, { status: 400 })
+  if (Number(category.categoryCount) !== 6) return NextResponse.json({ error: 'Your admin must finish adding six subcategories before you can record leads.' }, { status: 409 })
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const leadId = crypto.randomUUID()
     await client.query(
-      `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "contactName", "email", "phone", "industry", "website", "source", "notes", "updatedAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())`,
-      [leadId, staff.organizationId, staff.userId, businessName, body.contactName || null, body.email || null, body.phone || null, body.industry || null, body.website || null, body.source || null, body.note || null],
+      `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "contactName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "updatedAt")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())`,
+      [leadId, staff.organizationId, staff.userId, businessName, body.contactName || null, body.email || null, body.phone || null, staff.industryName, industryCategoryId, body.website || null, body.source || null, body.note || null],
     )
     await client.query(
       `INSERT INTO "SalesOutreach" ("id", "organizationId", "leadId", "ownerId", "channel", "platform", "note") VALUES ($1,$2,$3,$4,$5,$6,$7)`,
