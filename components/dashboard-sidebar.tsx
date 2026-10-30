@@ -19,7 +19,8 @@ const adminWorkspaceLinks = [
 
 const staffWorkspaceLinks = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Leads & prospects', href: '/dashboard/leads', icon: Users },
+  { label: "Today's leads", href: '/dashboard/leads', icon: ContactRound },
+  { label: 'All leads & prospects', href: '/dashboard/leads/all', icon: Users },
   { label: 'Pipeline', href: '/dashboard#pipeline', icon: Target },
 ]
 
@@ -69,7 +70,7 @@ export function DashboardSidebar({
       <p className="mb-3 mt-7 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#657286]">Workspace</p>
       <nav aria-label="Workspace navigation" className="space-y-1">
         {workspaceLinks.map(({ label, href, icon: Icon, ...rest }) => {
-          const active = href.includes('#') ? pathname === href.split('#')[0] : href === (role === 'ADMIN' ? '/admin' : '/dashboard') ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
+          const active = href.includes('#') ? false : role === 'STAFF' ? pathname === href : href === '/admin' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
           return <Link key={href} href={href} aria-current={active ? 'page' : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition ${active ? 'bg-[#e9eef5] text-[#07121f]' : 'text-[#657286] hover:bg-[#e9eef5]'}`}><Icon className="size-[17px]" strokeWidth={1.8} />{label}{'badge' in rest && rest.badge && <span className="ml-auto rounded bg-[#07121f] px-1.5 py-0.5 text-[9px] font-bold text-white">{rest.badge}</span>}</Link>
         })}
       </nav>
