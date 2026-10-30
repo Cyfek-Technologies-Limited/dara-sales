@@ -40,9 +40,9 @@ function SidebarLink({ label, href, icon: Icon, badge }: { label: string; href: 
 
 export function AdminSidebar({ userName, userEmail, organizationName }: { userName?: string; userEmail?: string; organizationName?: string } = {}) {
   return (
-    <aside className="hidden w-[220px] shrink-0 flex-col rounded-[24px] border border-[#d6deea] bg-white p-5 shadow-[0_10px_30px_rgba(20,34,28,0.035)] lg:flex">
+    <aside className="hidden w-[220px] shrink-0 flex-col rounded-[24px] border-[1px] border-black/30 bg-white p-5 shadow-[0_10px_30px_rgba(20,34,28,0.035)] lg:flex">
       <Link href="/admin" className="flex items-center gap-3 px-2" aria-label="Dara admin dashboard">
-        <span className="flex size-9 items-center justify-center rounded-full border-[3px] border-[#07121f] text-[#07121f]"><span className="size-3 rounded-full bg-[#07121f]" /></span>
+        <span className="flex size-9 items-center justify-center rounded-full border-[1px] border-black/30 text-[#07121f]"><span className="size-3 rounded-full bg-[#07121f]" /></span>
         <span className="font-serif text-lg font-bold tracking-tight">Dara</span>
       </Link>
 
