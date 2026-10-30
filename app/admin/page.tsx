@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import { InviteLinkButton } from "@/components/invite-link-button";
 import { UpgradePlanButton } from "@/components/upgrade-plan-button";
 import {
@@ -129,7 +129,8 @@ export default async function AdminDashboard() {
   return (
     <main className="min-h-screen bg-[#f4f6f9] p-3 text-[#07121f] md:p-4">
       <div className="flex min-h-screen gap-3">
-        <AdminSidebar
+        <DashboardSidebar
+          role="ADMIN"
           userName={adminName}
           userEmail={session.user.email}
           organizationName={organization.name}

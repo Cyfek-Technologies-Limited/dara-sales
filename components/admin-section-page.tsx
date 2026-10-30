@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { CalendarDays, CheckCircle2, ClipboardList, CircleHelp, Settings, TrendingUp, Users } from 'lucide-react'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
-import { AdminSidebar } from '@/components/admin-sidebar'
+import { DashboardSidebar } from '@/components/dashboard-sidebar'
 
 const content = {
   tasks: { title: 'Tasks', eyebrow: 'Workspace / Tasks', description: 'Coordinate follow-ups and keep every sales motion moving.', icon: ClipboardList, cards: [['Open tasks', '12', 'Across your sales team'], ['Due today', '4', 'Needs attention'], ['Completed this week', '28', 'Strong team momentum']] },
@@ -47,7 +47,7 @@ export async function AdminSectionPage({ section }: { section: keyof typeof cont
 
   return (
     <main className="min-h-screen bg-[#f4f6f9] p-3 text-[#07121f] md:p-4">
-      <div className="flex min-h-screen gap-3"><AdminSidebar userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} /><section className="min-w-0 flex-1 rounded-[24px] border-[1px] border-black/30 bg-white px-4 py-5 shadow-[0_10px_30px_rgba(20,34,28,0.035)] sm:px-7 md:py-8">
+      <div className="flex min-h-screen gap-3"><DashboardSidebar role="ADMIN" userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} /><section className="min-w-0 flex-1 rounded-[24px] border-[1px] border-black/30 bg-white px-4 py-5 shadow-[0_10px_30px_rgba(20,34,28,0.035)] sm:px-7 md:py-8">
         <header className="border-b-[1px] border-black/30 pb-5"><p className="text-xs text-[#657286]">{organization.name} / {page.eyebrow.split(' / ')[1]}</p><div className="mt-2 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-[#e9eef5] text-[#07121f]"><Icon className="size-5" /></span><div><h1 className="text-3xl font-semibold tracking-[-0.04em]">{page.title}</h1><p className="mt-1 text-sm text-[#657286]">{page.description}</p></div></div></header>
         {section === 'team' ? <>
           <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[

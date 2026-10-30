@@ -62,5 +62,5 @@ export default async function LeadsPage() {
     lastNote: lead.lastNote || '',
   }))
 
-  return <LeadsContent user={{ name: session.user.name || session.user.email, jobTitle: member.jobTitle || 'Sales team member', organizationName: member.organizationName }} leads={leads} outreachToday={Number(outreachResult.rows[0].count)} dailyTarget={20} />
+  return <LeadsContent user={{ name: session.user.name || session.user.email, email: session.user.email, jobTitle: member.jobTitle || 'Sales team member', organizationName: member.organizationName }} leads={leads} outreachToday={Number(outreachResult.rows[0].count)} dailyTarget={20} />
 }

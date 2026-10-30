@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Activity, ArrowRight, Bell, CheckCircle2, ChevronDown, CircleHelp, LayoutDashboard, LogOut, Menu, Target, Users } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
+import { DashboardSidebar } from '@/components/dashboard-sidebar'
 import { RecentLeadRow, SalesStageTracker, type RecentLead, type SalesStageCounts } from '@/components/sales-dashboard-widgets'
 
 export type DashboardData = {
@@ -44,13 +45,7 @@ export default function DashboardContent({ data }: { data: DashboardData }) {
   return (
     <main className="min-h-screen bg-[#f4f6f9] p-3 text-[#07121f] md:p-4">
       <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
-        <aside className="hidden w-[232px] shrink-0 flex-col rounded-[26px] border-[1px] border-black/30 bg-white p-4 shadow-[0_10px_30px_rgba(7,18,31,0.04)] lg:flex">
-          <Link href="/dashboard" className="flex items-center gap-2 px-2 py-2"><span className="flex size-8 items-center justify-center rounded-xl bg-[#07121f] text-sm font-bold text-white">D</span><span className="font-serif text-lg font-semibold">Dara</span></Link>
-          <div className="mt-5 rounded-[20px] bg-[#07121f] p-4 text-white"><div className="flex size-9 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-[#a5f36c]">{initials(data.user.name)}</div><p className="mt-3 truncate font-serif text-sm font-semibold">{data.user.name}</p><p className="truncate text-[10px] text-[#d6deea]">{data.user.email}</p><span className="mt-3 inline-flex rounded-full bg-white/10 px-2.5 py-1 text-[9px] text-[#a5f36c]">{data.user.jobTitle}</span></div>
-          <p className="mb-2 mt-7 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#657286]">Workspace</p>
-          <nav className="space-y-1"><Link href="/dashboard" className="flex items-center gap-3 rounded-xl bg-[#e9eef5] px-3 py-3 text-sm font-semibold"><LayoutDashboard className="size-4" />Overview</Link><Link href="/dashboard/leads" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#657286] hover:bg-[#f4f6f9]"><Users className="size-4" />Leads &amp; prospects<span className="ml-auto rounded-full bg-[#f4f6f9] px-2 py-0.5 text-[9px]">{data.leadsCreated}</span></Link><a href="#pipeline" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-[#657286] hover:bg-[#f4f6f9]"><Target className="size-4" />Pipeline</a></nav>
-          <div className="mt-auto border-t-[1px] border-black/30 pt-4"><button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs text-[#657286] hover:bg-[#f4f6f9]"><LogOut className="size-4" />Sign out</button></div>
-        </aside>
+        <DashboardSidebar role="STAFF" userName={data.user.name} userEmail={data.user.email} organizationName={data.organizationName} jobTitle={data.user.jobTitle} />
 
         <section className="min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-4 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 sm:py-6">
           <header className="flex items-center justify-between border-b-[1px] border-black/30 pb-4"><div className="flex items-center gap-3"><button aria-label="Open navigation" className="lg:hidden"><Menu className="size-5" /></button><div><p className="text-[11px] text-[#657286]">{today}</p><h1 className="mt-1 font-serif text-xl font-semibold">Good morning, {firstName}</h1></div></div><div className="flex items-center gap-2"><button aria-label="Help center" className="hidden rounded-full border-[1px] border-black/30 bg-white p-2.5 text-[#657286] sm:block"><CircleHelp className="size-4" /></button><button aria-label="Notifications" className="rounded-full border-[1px] border-black/30 bg-white p-2.5 text-[#657286]"><Bell className="size-4" /></button><button onClick={() => setMenuOpen(!menuOpen)} aria-label="Account menu" className="flex items-center gap-2 rounded-full border-[1px] border-black/30 bg-white p-1.5"><span className="flex size-7 items-center justify-center rounded-full bg-[#07121f] text-[10px] font-bold text-white">{initials(data.user.name)}</span><ChevronDown className="mr-1 size-3.5 text-[#657286]" /></button></div></header>
