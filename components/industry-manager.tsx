@@ -194,6 +194,70 @@ export function IndustryManager({
           </p>
         )}
 
+        <section className="overflow-hidden rounded-2xl border-[1px] border-black/30 bg-white">
+          <div className="border-b border-black/20 p-5">
+            <h2 className="font-semibold">Intern assignments</h2>
+            <p className="mt-1 text-sm text-[#657286]">
+              Each intern can work in one assigned industry and select from its
+              six subcategories.
+            </p>
+          </div>
+          {teammates.length ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead className="bg-[#f4f6f9] text-[10px] uppercase tracking-[0.12em] text-[#657286]">
+                  <tr>
+                    <th className="px-5 py-3">Teammate</th>
+                    <th className="px-5 py-3">Industry</th>
+                    <th className="px-5 py-3">Clients</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/20">
+                  {teammates.map((teammate) => (
+                    <tr key={teammate.userId}>
+                      <td className="px-5 py-4">
+                        <p className="font-semibold">{teammate.name}</p>
+                        <p className="mt-1 text-xs text-[#657286]">
+                          {teammate.jobTitle || "Sales intern"} ·{" "}
+                          {teammate.email}
+                        </p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <select
+                          aria-label={`Industry for ${teammate.name}`}
+                          value={teammate.industryId || ""}
+                          disabled={
+                            savingUserId === teammate.userId ||
+                            industries.length === 0
+                          }
+                          onChange={(event) =>
+                            assignIndustry(teammate.userId, event.target.value)
+                          }
+                          className="w-full max-w-xs rounded-lg border-[1px] border-black/30 bg-white px-3 py-2 text-xs"
+                        >
+                          <option value="">Unassigned</option>
+                          {industries.map((industry) => (
+                            <option key={industry.id} value={industry.id}>
+                              {industry.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-5 py-4 font-semibold">
+                        {teammate.clientCount}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="p-10 text-center text-sm text-[#657286]">
+              No active interns are on the team yet.
+            </p>
+          )}
+        </section>
+
         {industries.length ? (
           <div className="mt-5 space-y-4 gap-2 grid grid-cols-3">
             {industries.map((industry) => {
@@ -376,69 +440,6 @@ export function IndustryManager({
               </tbody>
             </table>
           </div>
-        )}
-      </section>
-
-      <section className="overflow-hidden rounded-2xl border-[1px] border-black/30 bg-white">
-        <div className="border-b border-black/20 p-5">
-          <h2 className="font-semibold">Intern assignments</h2>
-          <p className="mt-1 text-sm text-[#657286]">
-            Each intern can work in one assigned industry and select from its
-            six subcategories.
-          </p>
-        </div>
-        {teammates.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="bg-[#f4f6f9] text-[10px] uppercase tracking-[0.12em] text-[#657286]">
-                <tr>
-                  <th className="px-5 py-3">Teammate</th>
-                  <th className="px-5 py-3">Industry</th>
-                  <th className="px-5 py-3">Clients</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/20">
-                {teammates.map((teammate) => (
-                  <tr key={teammate.userId}>
-                    <td className="px-5 py-4">
-                      <p className="font-semibold">{teammate.name}</p>
-                      <p className="mt-1 text-xs text-[#657286]">
-                        {teammate.jobTitle || "Sales intern"} · {teammate.email}
-                      </p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <select
-                        aria-label={`Industry for ${teammate.name}`}
-                        value={teammate.industryId || ""}
-                        disabled={
-                          savingUserId === teammate.userId ||
-                          industries.length === 0
-                        }
-                        onChange={(event) =>
-                          assignIndustry(teammate.userId, event.target.value)
-                        }
-                        className="w-full max-w-xs rounded-lg border-[1px] border-black/30 bg-white px-3 py-2 text-xs"
-                      >
-                        <option value="">Unassigned</option>
-                        {industries.map((industry) => (
-                          <option key={industry.id} value={industry.id}>
-                            {industry.name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-5 py-4 font-semibold">
-                      {teammate.clientCount}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="p-10 text-center text-sm text-[#657286]">
-            No active interns are on the team yet.
-          </p>
         )}
       </section>
     </div>

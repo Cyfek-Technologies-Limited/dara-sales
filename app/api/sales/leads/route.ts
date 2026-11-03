@@ -54,12 +54,12 @@ export async function POST(request: Request) {
   }
 
   const category = (await pool.query(
-    `SELECT c."id", (SELECT COUNT(*)::int FROM "IndustryCategory" WHERE "industryId" = c."industryId") AS "categoryCount"
-     FROM "IndustryCategory" c WHERE c."id" = $1 AND c."industryId" = $2`,
-    [industryCategoryId, staff.industryId],
+    `SELECT c."id" FROM "IndustryCategory" c
+     JOIN "Industry" i ON i."id" = c."industryId"
+     WHERE c."id" = $1 AND c."industryId" = $2 AND i."organizationId" = $3`,
+    [industryCategoryId, staff.industryId, staff.organizationId],
   )).rows[0]
   if (!category) return NextResponse.json({ error: 'Choose a subcategory under your assigned industry.' }, { status: 400 })
-  if (Number(category.categoryCount) !== 6) return NextResponse.json({ error: 'Your admin must finish adding six subcategories before you can record leads.' }, { status: 409 })
 
   const client = await pool.connect()
   try {
