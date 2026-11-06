@@ -3,7 +3,7 @@
 import { FormEvent, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ExternalLink, LoaderCircle, Plus, Search, Sparkles } from 'lucide-react'
+import { CheckCircle2, ExternalLink, LoaderCircle, Plus, Search, Sparkles } from 'lucide-react'
 
 type Suggestion = { name: string; reason: string; subcategories: string[] }
 type Category = { id: string; name: string; industryName: string; industryId: string }
@@ -26,11 +26,14 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
   const [exclusions, setExclusions] = useState('')
   const [resultLimit, setResultLimit] = useState('8')
   const [resultContext, setResultContext] = useState<{ categoryId: string; location: string } | null>(null)
-  const [ownerId, setOwnerId] = useState(teammates[0]?.id || '')
+  const [ownerId, setOwnerId] = useState('')
   const [loading, setLoading] = useState('')
   const [savingName, setSavingName] = useState('')
+  const [savingLeadKey, setSavingLeadKey] = useState('')
+  const [leadStatuses, setLeadStatuses] = useState<Record<string, { kind: 'success' | 'error'; message: string }>>({})
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const selectedOwnerId = teammates.some((teammate) => teammate.id === ownerId) ? ownerId : ''
 
   async function suggestIndustries(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -58,7 +61,7 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
 
   async function searchBusinesses(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setLoading('search'); setError(''); setMessage(''); setBusinesses([])
+    setLoading('search'); setError(''); setMessage(''); setBusinesses([]); setLeadStatuses({})
     try {
       const response = await fetch('/api/admin/prospecting/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ offering, location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit: Number(resultLimit) }) })
       const data = await response.json().catch(() => ({}))
@@ -71,16 +74,28 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
   }
 
   async function saveBusiness(business: Business) {
-    setSavingName(business.businessName); setError(''); setMessage('')
+    const key = `${business.businessName}:${business.website}`
+    const saveCategoryId = resultContext?.categoryId || categoryId
+    if (!saveCategoryId) {
+      setLeadStatuses((current) => ({ ...current, [key]: { kind: 'error', message: 'Choose an industry category and search again before adding this lead.' } }))
+      return
+    }
+    if (savingLeadKey || leadStatuses[key]?.kind === 'success') return
+    setSavingLeadKey(key); setError(''); setMessage('')
     try {
-      const response = await fetch('/api/admin/prospecting/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...business, categoryId: resultContext?.categoryId, ownerId }) })
+      const response = await fetch('/api/admin/prospecting/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...business, categoryId: saveCategoryId, ownerId: selectedOwnerId }), signal: AbortSignal.timeout(45000) })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Could not save this lead.')
-      setBusinesses((current) => current.filter((item) => item.businessName !== business.businessName))
-      setMessage(`${business.businessName} was added to the selected teammate’s leads.`)
+      const teammate = teammates.find((item) => item.id === data.ownerId)
+      setLeadStatuses((current) => ({ ...current, [key]: { kind: 'success', message: data.ownerId ? `Added to ${teammate?.name || teammate?.email || 'your teammate'}'s leads.` : 'Saved to leads as unassigned.' } }))
       router.refresh()
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save this lead.') }
-    finally { setSavingName('') }
+    } catch (cause) {
+      const message = cause instanceof Error && cause.name === 'TimeoutError'
+        ? 'Saving took too long. Check the leads page before trying again.'
+        : cause instanceof Error ? cause.message : 'Could not save this lead.'
+      setLeadStatuses((current) => ({ ...current, [key]: { kind: 'error', message } }))
+    }
+    finally { setSavingLeadKey('') }
   }
 
   const selectedCategory = categories.find((category) => category.id === (resultContext?.categoryId || categoryId))
@@ -130,9 +145,9 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
               <option value="5">Up to 5 businesses</option><option value="8">Up to 8 businesses</option><option value="12">Up to 12 businesses</option>
             </select>
           </label>
-          <label className="text-[13px] font-semibold text-slate-800">Assign saved leads to
-            <select value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className={fieldClassName}>
-              <option value="">Choose a teammate</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
+          <label className="text-[13px] font-semibold text-slate-800">Assign saved leads to (optional)
+            <select value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} className={fieldClassName}>
+              <option value="">Unassigned</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
             </select>
           </label>
           <div className="sm:col-span-2">
@@ -144,7 +159,51 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
         </fieldset>
       </form> : <div className="mt-4 rounded-xl bg-[#f4f6f9] p-4 text-xs leading-5 text-[#475569]">Add industries and categories before searching. <Link href="/admin/industries" className="font-semibold underline">Manage industries</Link></div>}
       {feedback && <p role={error ? 'alert' : 'status'} className={`mt-4 rounded-lg p-3 text-xs ${error ? 'border border-rose-300 bg-rose-100 text-rose-900' : 'border border-emerald-300 bg-emerald-100 text-emerald-950'}`}>{feedback}</p>}
-      {businesses.length > 0 && <div className="mt-5 space-y-3"><div><h3 className="text-sm font-semibold">Review search results</h3><p className="mt-1 text-xs text-[#475569]">{selectedCategory ? `${selectedCategory.industryName} · ${selectedCategory.name}` : 'Selected category'} · {resultContext?.location || location} · {businesses.length} possible businesses</p></div>{businesses.map((business) => <article key={`${business.businessName}:${business.website}`} className="rounded-xl border-[1px] border-black/30 bg-white p-4 shadow-sm transition hover:shadow-md"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start"><div className="min-w-0"><h4 className="font-semibold">{business.businessName}</h4><p className="mt-1 text-xs leading-5 text-[#475569]">{business.summary}</p>{(business.publicEmail || business.publicPhone) && <div className="mt-2 space-y-1 text-xs text-[#475467]">{business.publicEmail && <p>Email: <a className="font-medium text-violet-700 hover:underline" href={`mailto:${business.publicEmail}`}>{business.publicEmail}</a></p>}{business.publicPhone && <p>Phone: <a className="font-medium text-violet-700 hover:underline" href={`tel:${business.publicPhone}`}>{business.publicPhone}</a></p>}</div>}<div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium"><a href={business.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Official website <ExternalLink className="size-3" /></a><a href={business.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Research source <ExternalLink className="size-3" /></a>{business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Contact source <ExternalLink className="size-3" /></a>}</div></div><button type="button" onClick={() => saveBusiness(business)} disabled={!ownerId || Boolean(savingName)} className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:ring-4 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-50">{savingName === business.businessName ? <LoaderCircle className="size-3 animate-spin" /> : <Plus className="size-3" />}Add to leads</button></div></article>)}</div>}
+      {businesses.length > 0 && <div className="mt-5 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h3 className="text-sm font-semibold">Review search results</h3><p className="mt-1 text-xs text-[#475569]">{selectedCategory ? selectedCategory.industryName + ' / ' + selectedCategory.name : 'Selected category'} / {resultContext?.location || location} / {businesses.length} possible businesses</p></div>
+          <Link href="/admin/leads" className="text-xs font-semibold text-violet-700 underline">View leads</Link>
+        </div>
+        <div className="rounded-xl border-[1px] border-black/30 bg-teal-50 p-4">
+          <label htmlFor="results-owner" className="block text-[13px] font-semibold text-slate-800">Assign these leads to (optional)</label>
+          <select id="results-owner" value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} disabled={Boolean(savingLeadKey)} aria-describedby="results-owner-help" className={fieldClassName}>
+            <option value="">Unassigned</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
+          </select>
+          <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{teammates.length ? 'Save leads as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Leads will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-violet-700 underline">Manage team</Link></>}</p>
+        </div>
+        {businesses.map((business) => {
+          const key = business.businessName + ':' + business.website
+          const status = leadStatuses[key]
+          const isSaving = savingLeadKey === key
+          const isSaved = status?.kind === 'success'
+          return <article key={key} className="rounded-xl border-[1px] border-black/30 bg-white p-4 shadow-sm transition hover:shadow-md">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div className="min-w-0">
+                <h4 className="font-semibold">{business.businessName}</h4>
+                <p className="mt-1 text-xs leading-5 text-[#475569]">{business.summary}</p>
+                {(business.publicEmail || business.publicPhone) && <div className="mt-2 space-y-1 text-xs text-[#475467]">
+                  {business.publicEmail && <p>Email: <a className="font-medium text-violet-700 hover:underline" href={'mailto:' + business.publicEmail}>{business.publicEmail}</a></p>}
+                  {business.publicPhone && <p>Phone: <a className="font-medium text-violet-700 hover:underline" href={'tel:' + business.publicPhone}>{business.publicPhone}</a></p>}
+                </div>}
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium">
+                  <a href={business.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Official website <ExternalLink className="size-3" /></a>
+                  <a href={business.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Research source <ExternalLink className="size-3" /></a>
+                  {business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Contact source <ExternalLink className="size-3" /></a>}
+                </div>
+              </div>
+              <div className="shrink-0 sm:max-w-60">
+                <button type="button" onClick={() => saveBusiness(business)} disabled={Boolean(savingLeadKey) || isSaved} aria-label={(isSaved ? 'Added ' : 'Add ') + business.businessName + ' to leads'} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:ring-4 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60">
+                  {isSaving ? <LoaderCircle className="size-4 animate-spin" /> : isSaved ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}
+                  {isSaving ? 'Saving...' : isSaved ? 'Added to leads' : 'Add to leads'}
+                </button>
+                {status && <p role={isSaved ? 'status' : 'alert'} className={'mt-2 rounded-lg p-2.5 text-xs leading-5 ' + (isSaved ? 'bg-emerald-100 text-emerald-950' : 'bg-rose-100 text-rose-900')}>
+                  {status.message}{isSaved && <> <Link href="/admin/leads" className="font-semibold underline">View leads</Link></>}
+                </p>}
+              </div>
+            </div>
+          </article>
+        })}
+      </div>}
     </section>
     <p className="text-[11px] leading-5 text-[#64748b]">Search findings can be incomplete or outdated. Confirm the business and contact details from the linked source before outreach.</p>
   </div>

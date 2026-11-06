@@ -35,20 +35,21 @@ export async function POST(request: Request) {
   const rawPhone = typeof body.publicPhone === 'string' ? body.publicPhone.trim().slice(0, 40) : ''
   const phone = /^[+\d(][\d\s().+-]{6,38}$/.test(rawPhone) && rawPhone.replace(/\D/g, '').length >= 7 ? rawPhone : null
   const contactSourceUrl = validWebUrl(body.contactSourceUrl)
-  const ownerId = typeof body.ownerId === 'string' ? body.ownerId : ''
+  const requestedOwnerId = typeof body.ownerId === 'string' ? body.ownerId.trim() : ''
   const categoryId = typeof body.categoryId === 'string' ? body.categoryId : ''
-  if (!businessName || !website || !sourceUrl || !ownerId || !categoryId) return NextResponse.json({ error: 'Business, website, source link, teammate, and category are required.' }, { status: 400 })
+  if (!businessName || !website || !sourceUrl || !categoryId) return NextResponse.json({ error: 'Business, website, source link, and category are required.' }, { status: 400 })
 
   const category = (await pool.query(
     `SELECT c."id", i."name" AS "industryName" FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId"
      WHERE c."id" = $1 AND i."organizationId" = $2`, [categoryId, admin.organizationId],
   )).rows[0]
-  const owner = (await pool.query(
+  const owner = requestedOwnerId ? (await pool.query(
     `SELECT m."authUserId" FROM "OrganizationMember" m
      WHERE m."authUserId" = $1 AND m."organizationId" = $2 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'`,
-    [ownerId, admin.organizationId],
-  )).rows[0]
-  if (!category || !owner) return NextResponse.json({ error: 'Choose a valid industry category and active teammate.' }, { status: 400 })
+    [requestedOwnerId, admin.organizationId],
+  )).rows[0] : null
+  const ownerId = owner?.authUserId || null
+  if (!category) return NextResponse.json({ error: 'Choose a valid industry category.' }, { status: 400 })
   if ((email || phone) && (!contactSourceUrl || !website || new URL(contactSourceUrl).hostname.toLowerCase().replace(/^www\./, '') !== new URL(website).hostname.toLowerCase().replace(/^www\./, ''))) {
     return NextResponse.json({ error: 'Contact details need a source page on the business website.' }, { status: 400 })
   }
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())`,
       [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${contactSourceUrl ? ` | Contact source: ${contactSourceUrl}` : ''}`, summary],
     )
-    return NextResponse.json({ ok: true, id: leadId }, { status: 201 })
+    return NextResponse.json({ ok: true, id: leadId, ownerId }, { status: 201 })
   } catch (error) {
     console.error('[prospecting] Could not save business lead', error instanceof Error ? error.message : 'unknown')
     return NextResponse.json({ error: 'Could not add this business to the leads pipeline.' }, { status: 500 })

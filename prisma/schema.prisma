@@ -178,7 +178,7 @@ model StaffPerformance {
 model SalesLead {
   id                   String         @id @default(cuid())
   organizationId       String
-  ownerId              String
+  ownerId              String?
   businessName         String
   contactName          String?
   email                String?

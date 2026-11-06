@@ -1,0 +1,1 @@
+ALTER TABLE "SalesLead" ALTER COLUMN "ownerId" DROP NOT NULL;
