@@ -3,6 +3,17 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
 import HomePage from '@/components/home-page'
+import type { Metadata, Viewport } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Dara | AI prospecting and sales team management',
+  description: 'Discover businesses in your target industries and locations, save leads with source links, organize team outreach, and track prospects and client wins in one workspace.',
+}
+
+export const viewport: Viewport = {
+  colorScheme: 'light',
+  themeColor: '#fcfcf9',
+}
 
 export const dynamic = 'force-dynamic'
 

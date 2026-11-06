@@ -3,15 +3,15 @@
 import { FormEvent, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, ExternalLink, LoaderCircle, Plus, Search, Sparkles } from 'lucide-react'
+import { CheckCircle2, ExternalLink, LoaderCircle, Plus, Search, Radar } from 'lucide-react'
 
 type Suggestion = { name: string; reason: string; subcategories: string[] }
 type Category = { id: string; name: string; industryName: string; industryId: string }
 type Teammate = { id: string; name: string | null; email: string }
 type Business = { businessName: string; summary: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
 
-const fieldClassName = 'mt-1.5 w-full rounded-xl border-[1px] border-black/30 bg-white px-3.5 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-violet-600 focus:ring-4 focus:ring-violet-100 disabled:cursor-wait'
-const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-900', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-900', 'bg-emerald-100 text-emerald-900', 'bg-blue-100 text-blue-900']
+const fieldClassName = 'mt-1.5 w-full rounded-xl border-[1px] border-black/30 bg-white px-3.5 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-[#173b65] focus:ring-4 focus:ring-[#dbe5f0] disabled:cursor-wait'
+const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-900', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-900', 'bg-emerald-100 text-emerald-900', 'bg-[#dbe5f0] text-[#0b1f3a]']
 
 export default function ProspectingWorkbench({ categories, teammates }: { categories: Category[]; teammates: Teammate[] }) {
   const router = useRouter()
@@ -102,12 +102,12 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
   const feedback = error || message
 
   return <div className="mt-5 space-y-4">
-    <section className="rounded-2xl border-[1px] border-black/30 bg-gradient-to-br from-violet-50 via-white to-indigo-50 p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-md shadow-violet-600/25"><Sparkles className="size-5" /></span><div><h2 className="text-lg font-bold text-violet-950">Find your best-fit industries</h2><p className="mt-1 text-xs leading-5 text-[#475569]">Describe what you sell and the location you want to reach. AI will suggest relevant industries and six subcategories for each.</p></div></div>
-      <form onSubmit={suggestIndustries} className="mt-5 grid gap-3 sm:grid-cols-2"><label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">What product or service are you selling?<textarea required maxLength={500} value={offering} onChange={(event) => setOffering(event.target.value)} placeholder="For example: digital outdoor signage and campaign placement for local brands" className={`${fieldClassName} min-h-24 resize-y`} /></label><label className="text-[13px] font-semibold text-slate-800">Target location<input required maxLength={160} value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Lagos, Nigeria" className={fieldClassName} /></label><div className="flex items-end"><button disabled={loading === 'suggest'} className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-5 py-3 text-sm font-bold text-white shadow-md shadow-violet-700/20 transition hover:bg-violet-800 focus-visible:ring-4 focus-visible:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-60">{loading === 'suggest' ? <LoaderCircle className="size-4 animate-spin" /> : <Sparkles className="size-4" />}{loading === 'suggest' ? 'Finding industries…' : 'Suggest industries'}</button></div></form>
-      {suggestions.length > 0 && <div className="mt-5 grid gap-3 lg:grid-cols-2">{suggestions.map((suggestion) => <article key={suggestion.name} className="rounded-xl border-[1px] border-black/30 bg-white p-4 shadow-sm transition hover:shadow-md"><div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold">{suggestion.name}</h3><p className="mt-1 text-xs leading-5 text-[#475569]">{suggestion.reason}</p></div><button type="button" onClick={() => saveSuggestion(suggestion)} disabled={Boolean(savingName)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border-[1px] border-black/30 bg-violet-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-800 disabled:opacity-50">{savingName === suggestion.name ? <LoaderCircle className="size-3 animate-spin" /> : <Plus className="size-3" />}Add industry</button></div><div className="mt-3 flex flex-wrap gap-1.5">{suggestion.subcategories.map((category, index) => <span key={category} className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${categoryColors[index % categoryColors.length]}`}>{category}</span>)}</div></article>)}</div>}
+    <section className="rounded-2xl border-[1px] border-black/30 bg-gradient-to-br from-[#f1f4f8] via-white to-[#edf2f7] p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#102842] text-white shadow-md shadow-[#0b1f3a]/20"><Radar className="size-5" /></span><div><h2 className="text-lg font-bold text-[#0b1f3a]">Find your best-fit industries</h2><p className="mt-1 text-xs leading-5 text-[#475569]">Describe what you sell and the location you want to reach. AI will suggest relevant industries and six subcategories for each.</p></div></div>
+      <form onSubmit={suggestIndustries} className="mt-5 grid gap-3 sm:grid-cols-2"><label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">What product or service are you selling?<textarea required maxLength={500} value={offering} onChange={(event) => setOffering(event.target.value)} placeholder="For example: digital outdoor signage and campaign placement for local brands" className={`${fieldClassName} min-h-24 resize-y`} /></label><label className="text-[13px] font-semibold text-slate-800">Target location<input required maxLength={160} value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Lagos, Nigeria" className={fieldClassName} /></label><div className="flex items-end"><button disabled={loading === 'suggest'} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0b1f3a]/20 transition hover:bg-[#142e50] focus-visible:ring-4 focus-visible:ring-[#c9d8e8] disabled:cursor-not-allowed disabled:opacity-60">{loading === 'suggest' ? <LoaderCircle className="size-4 animate-spin" /> : <Radar className="size-4" />}{loading === 'suggest' ? 'Finding industries…' : 'Suggest industries'}</button></div></form>
+      {suggestions.length > 0 && <div className="mt-5 grid gap-3 lg:grid-cols-2">{suggestions.map((suggestion) => <article key={suggestion.name} className="rounded-xl border-[1px] border-black/30 bg-white p-4 shadow-sm transition hover:shadow-md"><div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold">{suggestion.name}</h3><p className="mt-1 text-xs leading-5 text-[#475569]">{suggestion.reason}</p></div><button type="button" onClick={() => saveSuggestion(suggestion)} disabled={Boolean(savingName)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border-[1px] border-black/30 bg-[#0b1f3a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#142e50] disabled:opacity-50">{savingName === suggestion.name ? <LoaderCircle className="size-3 animate-spin" /> : <Plus className="size-3" />}Add industry</button></div><div className="mt-3 flex flex-wrap gap-1.5">{suggestion.subcategories.map((category, index) => <span key={category} className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${categoryColors[index % categoryColors.length]}`}>{category}</span>)}</div></article>)}</div>}
     </section>
 
-    <section className="rounded-2xl border-[1px] border-black/30 bg-gradient-to-br from-cyan-50 via-white to-teal-50 p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-md shadow-teal-600/25"><Search className="size-5" /></span><div><h2 className="text-lg font-bold text-teal-950">Discover businesses</h2><p className="mt-1 text-xs leading-5 text-[#475569]">Search current web results for businesses in a saved category. Review the official website and source page before adding any prospect.</p></div></div>
+    <section className="rounded-2xl border-[1px] border-black/30 bg-gradient-to-br from-[#f1f4f8] via-white to-[#edf2f7] p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#102842] text-white shadow-md shadow-[#0b1f3a]/20"><Search className="size-5" /></span><div><h2 className="text-lg font-bold text-[#0b1f3a]">Discover businesses</h2><p className="mt-1 text-xs leading-5 text-[#475569]">Search current web results for businesses in a saved category. Review the official website and source page before adding any prospect.</p></div></div>
       {categories.length ? <form onSubmit={searchBusinesses} className="mt-5">
         <fieldset disabled={loading === 'search'} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
           <label className="text-[13px] font-semibold text-slate-800">Industry category
@@ -151,7 +151,7 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
             </select>
           </label>
           <div className="sm:col-span-2">
-            <button disabled={loading === 'search' || !offering.trim() || !location.trim() || !categoryId} className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white shadow-md shadow-teal-700/20 transition hover:bg-teal-800 focus-visible:ring-4 focus-visible:ring-teal-200 disabled:cursor-not-allowed disabled:opacity-50">
+            <button disabled={loading === 'search' || !offering.trim() || !location.trim() || !categoryId} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0b1f3a]/20 transition hover:bg-[#142e50] focus-visible:ring-4 focus-visible:ring-[#c9d8e8] disabled:cursor-not-allowed disabled:opacity-50">
               {loading === 'search' ? <LoaderCircle className="size-4 animate-spin" /> : <Search className="size-4" />}{loading === 'search' ? 'Searching the web...' : 'Find businesses'}
             </button>
             <p className="mt-2 text-[11px] leading-5 text-[#475569]">These fields guide web research. More restrictive searches may return fewer results. Review each source before saving a lead.</p>
@@ -162,14 +162,14 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
       {businesses.length > 0 && <div className="mt-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h3 className="text-sm font-semibold">Review search results</h3><p className="mt-1 text-xs text-[#475569]">{selectedCategory ? selectedCategory.industryName + ' / ' + selectedCategory.name : 'Selected category'} / {resultContext?.location || location} / {businesses.length} possible businesses</p></div>
-          <Link href="/admin/leads" className="text-xs font-semibold text-violet-700 underline">View leads</Link>
+          <Link href="/admin/leads" className="text-xs font-semibold text-[#173b65] underline">View leads</Link>
         </div>
-        <div className="rounded-xl border-[1px] border-black/30 bg-teal-50 p-4">
+        <div className="rounded-xl border-[1px] border-black/30 bg-[#edf2f7] p-4">
           <label htmlFor="results-owner" className="block text-[13px] font-semibold text-slate-800">Assign these leads to (optional)</label>
           <select id="results-owner" value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} disabled={Boolean(savingLeadKey)} aria-describedby="results-owner-help" className={fieldClassName}>
             <option value="">Unassigned</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
           </select>
-          <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{teammates.length ? 'Save leads as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Leads will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-violet-700 underline">Manage team</Link></>}</p>
+          <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{teammates.length ? 'Save leads as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Leads will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-[#173b65] underline">Manage team</Link></>}</p>
         </div>
         {businesses.map((business) => {
           const key = business.businessName + ':' + business.website
@@ -182,13 +182,13 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
                 <h4 className="font-semibold">{business.businessName}</h4>
                 <p className="mt-1 text-xs leading-5 text-[#475569]">{business.summary}</p>
                 {(business.publicEmail || business.publicPhone) && <div className="mt-2 space-y-1 text-xs text-[#475467]">
-                  {business.publicEmail && <p>Email: <a className="font-medium text-violet-700 hover:underline" href={'mailto:' + business.publicEmail}>{business.publicEmail}</a></p>}
-                  {business.publicPhone && <p>Phone: <a className="font-medium text-violet-700 hover:underline" href={'tel:' + business.publicPhone}>{business.publicPhone}</a></p>}
+                  {business.publicEmail && <p>Email: <a className="font-medium text-[#173b65] hover:underline" href={'mailto:' + business.publicEmail}>{business.publicEmail}</a></p>}
+                  {business.publicPhone && <p>Phone: <a className="font-medium text-[#173b65] hover:underline" href={'tel:' + business.publicPhone}>{business.publicPhone}</a></p>}
                 </div>}
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium">
-                  <a href={business.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Official website <ExternalLink className="size-3" /></a>
-                  <a href={business.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Research source <ExternalLink className="size-3" /></a>
-                  {business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-violet-700 hover:underline">Contact source <ExternalLink className="size-3" /></a>}
+                  <a href={business.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#173b65] hover:underline">Official website <ExternalLink className="size-3" /></a>
+                  <a href={business.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#173b65] hover:underline">Research source <ExternalLink className="size-3" /></a>
+                  {business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#173b65] hover:underline">Contact source <ExternalLink className="size-3" /></a>}
                 </div>
               </div>
               <div className="shrink-0 sm:max-w-60">

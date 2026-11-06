@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { CircleHelp, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target, Tags, Search, Menu, X, ArrowUpRight } from 'lucide-react'
+import { CircleHelp, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target, Tags, Search, Menu, X, ArrowUpRight, Radar } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { InviteLinkButton } from '@/components/invite-link-button'
 
@@ -58,6 +58,7 @@ export function DashboardSidebar({
   }
 
   const initials = userName.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase()
+  const InviteIcon = pathname.startsWith('/admin/prospecting') ? Radar : Sparkles
   const currentPage = [...workspaceLinks, ...generalLinks].find((link) => link.href === pathname)?.label || 'Workspace'
   const shownLinks = workspaceLinks.filter((link) => link.label.toLowerCase().includes(navSearch.toLowerCase()))
 
@@ -77,7 +78,7 @@ export function DashboardSidebar({
       {role === 'ADMIN' && <nav aria-label="General navigation" className="dashboard-general-links">{generalLinks.map(({label, href, icon: Icon}) => <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined} className={`dashboard-nav-link ${pathname === href ? 'is-active' : ''}`}><Icon className="size-[21px] shrink-0" strokeWidth={1.6} /><span>{label}</span></Link>)}</nav>}
       <div className="dashboard-sidebar-footer">
         {role === 'STAFF' && <div className="mb-5 text-xs leading-5 text-white/70"><p className="font-semibold text-white">{jobTitle || 'Sales team'}</p><p>{industry || 'Industry not assigned'}</p></div>}
-        {role === 'ADMIN' && <div className="dashboard-invite-panel"><Sparkles className="mb-2 size-5 text-[#e3a7cc]" /><p className="text-sm font-semibold text-white">Better, together.</p><p className="mb-3 mt-1 text-xs leading-5 text-white/65">Bring your team into the conversation.</p><InviteLinkButton /></div>}
+        {role === 'ADMIN' && <div className="dashboard-invite-panel"><InviteIcon className="mb-2 size-5 text-[#e3a7cc]" /><p className="text-sm font-semibold text-white">Better, together.</p><p className="mb-3 mt-1 text-xs leading-5 text-white/65">Bring your team into the conversation.</p><InviteLinkButton /></div>}
         <button type="button" onClick={signOut} className="dashboard-signout"><LogOut className="size-[18px]" />Sign out<ArrowUpRight className="ml-auto size-4 opacity-50" /></button>
       </div>
     </aside>

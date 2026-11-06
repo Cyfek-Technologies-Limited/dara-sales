@@ -1,146 +1,34 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import {
-  Activity,
-  ArrowRight,
-  ArrowUpRight,
-  BarChart3,
-  Check,
-  CheckCircle2,
-  ClipboardCheck,
-  Clock3,
-  MessageSquareText,
-  Target,
-  TrendingUp,
-  Users,
-  Zap,
-} from "lucide-react";
-
-const representative =
-  "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Professional%20Customer%20Service%20Representative-KuQFGu0UuUowzYnbFwwTkdTPaAf5eS.png";
+import Link from 'next/link'
+import { ArrowRight, ArrowUpRight, BarChart3, Check, CheckCircle2, Layers3, Radar, Users } from 'lucide-react'
+import styles from './home-page.module.css'
 
 const capabilities = [
-  {
-    number: "01",
-    icon: Target,
-    title: "Give every rep a clear target.",
-    text: "Assign daily outreach goals, define target industries, and make sure everyone knows which prospects they should be pursuing.",
-    tags: ["Daily targets", "Assigned niches"],
-  },
-  {
-    number: "02",
-    icon: ClipboardCheck,
-    title: "Keep every lead moving.",
-    text: "Track prospects from first contact to follow-up and final outcome. Know who has been contacted, who needs attention, and what happens next.",
-    tags: ["Lead tracking", "Follow-up reminders"],
-  },
-  {
-    number: "03",
-    icon: Activity,
-    title: "See the work behind the numbers.",
-    text: "Give your team a place to log calls, emails, messages, replies, meetings, and sales so their progress is visible throughout the day.",
-    tags: ["Activity logs", "Daily reports"],
-  },
-  {
-    number: "04",
-    icon: BarChart3,
-    title: "Manage with real visibility.",
-    text: "Review individual and team performance, compare activity against targets, and identify where your sales process needs attention.",
-    tags: ["Performance dashboard", "Team reporting"],
-  },
-];
-
-const outcomes = [
-  {
-    icon: Clock3,
-    title: "Fewer forgotten follow-ups",
-    text: "Give every prospect a clear next step instead of relying on memory, scattered notes, or unread messages.",
-  },
-  {
-    icon: Users,
-    title: "More accountable teams",
-    text: "Make expectations visible and give team members a consistent way to report their progress.",
-  },
-  {
-    icon: TrendingUp,
-    title: "Better-informed decisions",
-    text: "Understand where your team is putting in the work, where prospects are dropping off, and where to improve.",
-  },
-];
-
-const workflow = [
-  {
-    number: "01",
-    title: "Set the direction",
-    text: "Choose your target markets, assign prospects or industries, and define the activity goals your team should meet.",
-  },
-  {
-    number: "02",
-    title: "Work the pipeline",
-    text: "Your reps find prospects, record outreach, update lead statuses, and keep track of the next action for each opportunity.",
-  },
-  {
-    number: "03",
-    title: "Review the results",
-    text: "See activity and sales progress in one place. Coach your team using actual work records rather than guesswork.",
-  },
-];
-
-const useCases = [
-  {
-    title: "Outbound sales teams",
-    text: "Organize prospecting, cold calls, emails, follow-ups, and daily outreach goals.",
-    label: "PROSPECTING",
-  },
-  {
-    title: "Startups and small businesses",
-    text: "Build a repeatable sales process before your growing team becomes difficult to manage.",
-    label: "GROWTH",
-  },
-  {
-    title: "Sales managers and agencies",
-    text: "Manage multiple salespeople, review their activities, and spot bottlenecks before they affect results.",
-    label: "TEAM MANAGEMENT",
-  },
-  {
-    title: "Commission-based teams",
-    text: "Keep sales activity and recorded outcomes organized so performance and commission reviews have a clearer basis.",
-    label: "PERFORMANCE",
-  },
-];
-
-const dashboardActivities = [
-  { name: "Prospects researched", value: "12", percent: 60 },
-  { name: "Businesses contacted", value: "16", percent: 80 },
-  { name: "Follow-ups completed", value: "8", percent: 40 },
-];
-
-function SectionEyebrow({
-  children,
-  light = false,
-}: {
-  children: React.ReactNode;
-  light?: boolean;
-}) {
-  return (
-    <p
-      className={`text-[10px] font-medium uppercase tracking-[0.2em] ${
-        light ? "text-[#a5f36c]" : "text-[#5366df]"
-      }`}
-    >
-      {children}
-    </p>
-  );
-}
-
+  { icon: Radar, label: 'DISCOVER', title: 'Start with the right market.', description: 'Describe your product or service and target location. Dara suggests relevant industries and categories, then helps you find businesses worth approaching.', detail: 'Industry suggestions + business search' },
+  { icon: Layers3, label: 'ORGANIZE', title: 'Build a pipeline you can trust.', description: 'Review business websites and public contact details with their source links. Save the leads you want, with notes and a clear stage for each opportunity.', detail: 'Leads / prospects / clients' },
+  { icon: Users, label: 'COORDINATE', title: 'Give your team direction.', description: 'Assign teammates to industries, distribute leads, and record outreach and follow-ups. Keep today?s activity separate from your complete lead history.', detail: 'Shared leads + daily outreach' },
+  { icon: BarChart3, label: 'UNDERSTAND', title: 'See which markets respond.', description: 'Compare prospects and client wins by industry and category. Use charts and team activity to decide where to focus your next sales effort.', detail: 'Industry analytics + team visibility' },
+]
+const steps = [
+  { number: '01', title: 'Tell Dara what you sell.', text: 'Enter your product or service and the location you want to reach. Choose a suggested industry or one you have already saved.' },
+  { number: '02', title: 'Discover. Review. Save.', text: 'Narrow the search with categories, keywords, business size, and contact preferences. Check the sources and add relevant businesses to your leads.' },
+  { number: '03', title: 'Work the opportunity.', text: 'Keep leads unassigned or give them to a teammate. Log outreach, move conversations through the pipeline, and see where clients come from.' },
+]
+const questions = [
+  { question: 'What does Dara actually do?', answer: 'Dara is an AI prospecting and sales team workspace. It helps you choose target industries, discover businesses in a location, review publicly sourced contact information, save leads, record outreach, and track progress from lead to client.' },
+  { question: 'Can I use Dara without a sales team?', answer: 'Yes. You can research businesses and save leads as unassigned. When you have active teammates, you can choose an assignee while saving new leads.' },
+  { question: 'Will every business have an email and phone number?', answer: 'Contact availability varies. Dara can surface general business emails and main phone numbers published on official business pages, with source links for review. You can also search for businesses without requiring contact details.' },
+  { question: 'Does Dara send messages or close deals for me?', answer: 'Your team handles the conversations. Dara helps with research, lead organization, outreach records, and pipeline visibility; it does not guarantee a response or a sale.' },
+  { question: 'What can I learn from the analytics?', answer: 'You can compare current leads, prospects, and client wins across your industries and categories, and review team activity. This helps you see which niches deserve more attention and where opportunities need a follow-up.' },
+]
 export default function LandingPage() {
-  return (
-    <main className="min-h-screen overflow-hidden  text-[#111827]">
-      <section
-        id="product"
+  return <main className={styles.landingPage}>
+    <a href="#main-content" className={styles.skipLink}>Skip to content</a>
+    <section
+        id="main-content"
         // aria-label="Dara business management"
-        className="relative h-screen mx-auto flex min-h-[min(900px,94vh)] w-full flex-col overflow-hidden bg-[#06101c] bg-cover lg:bg-left text-white lg:bg-[length:80%_auto] lg:bg-right lg:bg-no-repeat"
+        className={styles.originalHero + " relative h-screen mx-auto flex min-h-[min(900px,94vh)] w-full flex-col overflow-hidden bg-[#06101c] bg-cover lg:bg-left text-white lg:bg-[length:80%_auto] lg:bg-right lg:bg-no-repeat"}
         style={{ backgroundImage: "url('/dara-team-banner.png')" }}
       >
         {/* <div aria-hidden="true" className="absolute inset-0 bg-[#06101c]/35" /> */}
@@ -152,12 +40,12 @@ export default function LandingPage() {
           aria-hidden="true"
           className="absolute inset-y-0 left-[10%] hidden w-[35%] bg-gradient-to-r from-[#06101c] via-[#06101c]/80 to-transparent lg:block"
         />
-        <header className="relative z-20 flex h-24 items-center justify-between px-6 sm:h-28 sm:px-[7.5%]">
+        <header className="relative z-20 flex h-24 shrink-0 items-center justify-between px-6 sm:h-28 sm:px-[7.5%]">
           <nav className="flex items-center gap-5 text-sm text-white/90 sm:gap-10 sm:text-lg lg:gap-14">
-            <a href="#product" className="transition hover:text-white">
+            <a href="#main-content" className="transition hover:text-white">
               Home
             </a>
-            <a href="#solutions" className="transition hover:text-white">
+            <a href="#why-dara" className="transition hover:text-white">
               Team
             </a>
             <a href="#footer" className="transition hover:text-white">
@@ -172,7 +60,7 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4 sm:gap-8">
             <a
-              href="#workflow"
+              href="#how-it-works"
               className="hidden text-sm text-white/90 transition hover:text-white sm:inline lg:text-lg"
             >
               Company
@@ -189,15 +77,17 @@ export default function LandingPage() {
           </div>
         </header>
 
-        <div className="relative z-10 flex flex-1 items-center px-6 pb-16 sm:px-[7.5%] sm:pb-20">
-          <div className="max-w-[690px]">
-            <h1 className="lg:text-[4.5rem] text-[3rem] font-bold leading-[1.1] tracking-[-0.085em]">
-              Manage your sales team with clarity.
+        <div className={styles.originalHeroContent + " relative z-10 flex flex-1 items-center px-6 sm:px-[7.5%]"}>
+          <div className={styles.originalHeroCopy}>
+            <h1 className={styles.originalHeroTitle}>
+              <span>Find the right businesses.</span>
+              <span>Turn leads into clients.</span>
             </h1>
-            <p className="mt-7 max-w-[550px] text-sm leading-7 text-white/80 sm:mt-9 sm:text-base sm:leading-7">
-              Bring your sales team, customer relationships, and follow-ups
-              together. Dara gives you a clearer way to manage the work that
-              moves your business forward.
+            <p className={styles.originalHeroDescription}>
+              Tell Dara what you sell and where you want to grow. Use AI to
+              discover relevant businesses and publicly listed contact details,
+              save leads, and track your team&apos;s outreach from first contact
+              to client. See which industries bring results, all in one workspace.
             </p>
             <Link
               href="/sign-up"
@@ -208,509 +98,27 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      {/* 1. The problem: make visitors recognize their situation */}
-      <section
-        id="solutions"
-        className="px-8 py-24 sm:px-14 lg:px-[10%] lg:py-32"
-      >
-        <div className="grid gap-12 lg:grid-cols-[1fr_0.8fr] lg:items-end">
-          <div>
-            <SectionEyebrow>The problem</SectionEyebrow>
-            <h2 className="mt-6 max-w-[680px] font-serif text-5xl font-normal leading-[0.91] tracking-[-0.065em] sm:text-7xl">
-              You can&apos;t grow a sales team you can&apos;t see.
-            </h2>
-          </div>
 
-          <div className="max-w-[440px]">
-            <p className="text-sm leading-7 text-[#596579]">
-              Your salespeople are busy. Prospects are being contacted.
-              Follow-ups are happening. But when the information lives in
-              spreadsheets, chats, personal notes, and scattered reports, it
-              becomes difficult to know what is actually getting done.
-            </p>
-            <p className="mt-5 text-sm leading-7 text-[#596579]">
-              Dara brings your team&apos;s sales activities into one structured
-              workspace, so everyone knows what to do and managers can see how
-              the work is progressing.
-            </p>
-          </div>
-        </div>
+    <div className={styles.journeyBand}><div className={styles.journeyInner}><p>FROM OPPORTUNITY<br /><strong>TO A CLEAR NEXT STEP.</strong></p><div>{['Discover businesses','Save your leads','Record outreach','Track client wins'].map((item,index) => <span key={item}>{index > 0 && <ArrowRight size={15} aria-hidden="true" />}<span>{item}</span></span>)}</div></div></div>
 
-        <div className="mt-16 grid gap-3 md:grid-cols-3">
-          {[
-            {
-              number: "01",
-              title: "Leads get lost.",
-              text: "Prospect details and conversations are scattered across different tools.",
-            },
-            {
-              number: "02",
-              title: "Follow-ups slip.",
-              text: "Without a clear process, interested prospects can go cold.",
-            },
-            {
-              number: "03",
-              title: "Performance is unclear.",
-              text: "Activity reports arrive late, and managers struggle to verify progress.",
-            },
-          ].map((item) => (
-            <article
-              key={item.number}
-              className="rounded-xl border border-[#d6deea] p-7 sm:p-8"
-            >
-              <span className="text-[10px] tracking-[0.16em] text-[#5366df]">
-                {item.number}
-              </span>
-              <h3 className="mt-10 font-serif text-3xl tracking-[-0.045em]">
-                {item.title}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-[#596579]">
-                {item.text}
-              </p>
-            </article>
-          ))}
-        </div>
+    <section id="product" className={styles.section}><div className={styles.sectionHeading}><div><p className={styles.eyebrow}>A WORKSPACE THAT CONNECTS THE WORK</p><h2>From &ldquo;who should we target?&rdquo;<br />to &ldquo;what happens next?&rdquo;</h2></div><p>Finding a business is only the start. Dara connects prospect research, lead records, team activity, and results so the next step stays clear.</p></div><div className={styles.featureGrid}>{capabilities.map(({ icon: Icon, label, title, description, detail }) => <article className={styles.featureCard} key={label}><div className={styles.featureTop}><span className={styles.featureIcon}><Icon size={22} /></span><span>{label}</span></div><h3>{title}</h3><p>{description}</p><div className={styles.featureDetail}><Check size={14} />{detail}</div></article>)}</div></section>
 
-        <div className="mt-8 flex items-start gap-3 rounded-xl bg-[#e9eef5] p-5 sm:items-center sm:p-6">
-          <Zap className="mt-0.5 size-5 shrink-0 text-[#5366df] sm:mt-0" />
-          <p className="text-sm leading-6">
-            <strong>Sales shouldn&apos;t depend on memory.</strong> Give your
-            team a clear process for finding prospects, taking action, and
-            reporting results.
-          </p>
-        </div>
-      </section>
+    <section id="why-dara" className={styles.darkSection}><div className={styles.darkInner}><div className={styles.darkHeading}><p className={styles.eyebrow}>WHY IT MATTERS FOR YOUR BUSINESS</p><h2>A lead list isn&apos;t a sales process.<br /><span>Give it direction.</span></h2><p>When research lives in one place, outreach in another, and results in someone&apos;s head, opportunities become hard to follow. Dara puts the work in view so you can act on it.</p></div><div className={styles.benefitGrid}>{[
+      { number: '01', title: 'Spend less time starting from scratch.', text: 'Use a focused industry and location search to build a relevant lead list, instead of asking every salesperson to repeat the same research.' },
+      { number: '02', title: 'Keep ownership and context clear.', text: 'Save business details, source links, notes, and outreach history together. See who is handling a lead and which ones are still unassigned.' },
+      { number: '03', title: 'Put your effort where it matters.', text: 'Compare industry and category results. See which conversations are turning into prospects and clients before deciding where to focus next.' },
+    ].map((item) => <article key={item.number}><span className={styles.benefitNumber}>{item.number}</span><h3>{item.title}</h3><p>{item.text}</p></article>)}</div></div></section>
 
-      {/* 2. Core product capabilities */}
-      <section className="bg-[#07121f] px-8 py-24 text-[#f5f8fc] sm:px-14 lg:px-[10%] lg:py-32">
-        <div className="max-w-[720px]">
-          <SectionEyebrow light>
-            One workspace. A clearer process.
-          </SectionEyebrow>
-          <h2 className="mt-6 font-serif text-5xl font-normal leading-[0.92] tracking-[-0.065em] sm:text-7xl">
-            Everything your sales team needs to move forward.
-          </h2>
-          <p className="mt-6 max-w-[510px] text-sm leading-7 text-[#b5c0cf]">
-            From the first prospect you discover to the final sale you record,
-            manage your team&apos;s day-to-day sales operations without losing
-            sight of the bigger picture.
-          </p>
-        </div>
+    <section id="how-it-works" className={styles.section}><div className={styles.centerHeading}><p className={styles.eyebrow}>A SIMPLE WAY TO START</p><h2>Your next sales routine,<br />in three clear steps.</h2><p>One workflow for the owner setting the direction and the people having the conversations.</p></div><div className={styles.steps}>{steps.map((step) => <article key={step.number}><span className={styles.stepNumber}>{step.number}</span><h3>{step.title}</h3><p>{step.text}</p></article>)}</div><div className={styles.workflowFootnote}><Users size={18} /><p><strong>Solo today, a team tomorrow.</strong> Save leads without an assignee, then add teammates as your business grows.</p><Link href="/sign-up">Build your workspace<ArrowUpRight size={15} /></Link></div></section>
 
-        <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-2">
-          {capabilities.map(({ number, icon: Icon, title, text, tags }) => (
-            <article key={number} className="bg-[#0d1a29] p-7 sm:p-10">
-              <div className="flex items-center justify-between">
-                <div className="flex size-11 items-center justify-center rounded-full border border-white/10">
-                  <Icon className="size-5 text-[#a5f36c]" />
-                </div>
-                <span className="font-serif text-2xl text-white/25">
-                  {number}
-                </span>
-              </div>
+    <section className={styles.focusSection}><div className={styles.focusInner}><div><p className={styles.eyebrow}>LESS GUESSWORK. MORE CONTEXT.</p><h2>Know which niche<br />deserves your next call.</h2><p>One industry can contain very different opportunities. Group businesses into categories, assign your team a focus, and compare where prospects and client wins are coming from.</p><ul>{['Organize industries and their business categories','Compare leads, prospects, and client wins','Review daily outreach and team progress'].map((item) => <li key={item}><CheckCircle2 size={17} />{item}</li>)}</ul></div><div className={styles.insightCard}><div className={styles.insightHeader}><span><BarChart3 size={19} />Industry insights</span><small>Sample data</small></div><h3>A clearer picture of your pipeline.</h3><p>Client wins by category</p>{[{ label:'Coworking spaces', count:7, width:88 },{ label:'Event venues', count:5, width:63 },{ label:'Retail businesses', count:3, width:38 }].map((item) => <div className={styles.insightRow} key={item.label}><div><span>{item.label}</span><strong>{item.count} clients</strong></div><div className={styles.insightTrack}><span style={{width:item.width+'%'}} /></div></div>)}<div className={styles.insightFooter}><span className={styles.eyebrowDot} />Illustrative figures. Your dashboard uses your saved pipeline.</div></div></div></section>
 
-              <h3 className="mt-12 max-w-[340px] font-serif text-3xl leading-[1.02] tracking-[-0.045em] sm:text-4xl">
-                {title}
-              </h3>
+    <section id="faq" className={styles.faqSection}><div><p className={styles.eyebrow}>GOOD QUESTIONS</p><h2>A little more clarity.</h2><p>What to expect from your Dara workspace.</p></div><div className={styles.faqList}>{questions.map((item) => <details key={item.question}><summary>{item.question}<PlusIcon /></summary><p>{item.answer}</p></details>)}</div></section>
 
-              <p className="mt-5 max-w-[390px] text-sm leading-7 text-[#b5c0cf]">
-                {text}
-              </p>
+    <section className={styles.finalCta}><div><p className={styles.eyebrow}>YOUR NEXT OPPORTUNITY STARTS HERE</p><h2>Better prospects.<br />A clearer way forward.</h2><p>Bring your research, leads, and sales team into one workspace. Start with what you sell. Build from there.</p></div><div><Link href="/sign-up" className={styles.primaryButton}>Get started with Dara<ArrowRight size={17} /></Link><span>No sales team required to start.</span></div></section>
 
-              <div className="mt-7 flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] text-[#d8e0ec]"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* 3. Show a tangible example of the product */}
-      <section className="px-5 py-24 sm:px-10 lg:px-[10%] lg:py-32">
-        <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-          <div>
-            <SectionEyebrow>Clarity, every day</SectionEyebrow>
-            <h2 className="mt-6 max-w-[500px] font-serif text-5xl font-normal leading-[0.91] tracking-[-0.065em] sm:text-6xl">
-              Know what&apos;s happening before the day is over.
-            </h2>
-            <p className="mt-6 max-w-[410px] text-sm leading-7 text-[#596579]">
-              Give every salesperson a clear view of their priorities and give
-              managers a practical way to review the team&apos;s activity. No
-              more piecing together updates from multiple conversations.
-            </p>
-
-            <ul className="mt-8 space-y-4">
-              {[
-                "Daily activity against assigned targets",
-                "A clearer record of prospects and outreach",
-                "Follow-ups and outcomes in one workflow",
-                "Performance visibility for managers",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#5366df]" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Illustrative dashboard preview */}
-          <div className="overflow-hidden rounded-2xl border border-[#d6deea] bg-[#f4f7fa] shadow-[0_24px_80px_rgba(23,23,23,0.08)]">
-            <div className="flex items-center justify-between border-b border-[#e9eef5] px-5 py-4 sm:px-7">
-              <div>
-                <p className="text-[9px] uppercase tracking-[0.16em] text-[#657286]">
-                  Sales workspace
-                </p>
-                <h3 className="mt-1 text-sm font-semibold">Daily overview</h3>
-              </div>
-              <span className="rounded-full bg-[#e9eef5] px-3 py-1.5 text-[9px]">
-                Example dashboard
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-6">
-              <div className="rounded-xl border border-[#e9eef5] bg-[#f4f6f9] p-4">
-                <div className="flex items-center gap-2 text-[#657286]">
-                  <Target className="size-4" />
-                  <span className="text-[10px]">Daily target</span>
-                </div>
-                <p className="mt-5 font-serif text-3xl tracking-[-0.05em]">
-                  20
-                </p>
-                <p className="mt-1 text-[10px] text-[#657286]">
-                  Example activities
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-[#e9eef5] bg-[#f4f6f9] p-4">
-                <div className="flex items-center gap-2 text-[#657286]">
-                  <Activity className="size-4" />
-                  <span className="text-[10px]">Completed</span>
-                </div>
-                <p className="mt-5 font-serif text-3xl tracking-[-0.05em]">
-                  16
-                </p>
-                <p className="mt-1 text-[10px] text-[#657286]">
-                  Example activities
-                </p>
-              </div>
-
-              <div className="col-span-2 rounded-xl border border-[#e9eef5] bg-[#f4f6f9] p-4 sm:col-span-1">
-                <div className="flex items-center gap-2 text-[#657286]">
-                  <TrendingUp className="size-4" />
-                  <span className="text-[10px]">Target progress</span>
-                </div>
-                <p className="mt-5 font-serif text-3xl tracking-[-0.05em]">
-                  80%
-                </p>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#d6deea]">
-                  <div className="h-full w-4/5 rounded-full bg-[#5366df]" />
-                </div>
-              </div>
-            </div>
-
-            <div className="mx-4 mb-4 rounded-xl border border-[#e9eef5] bg-[#f4f6f9] p-4 sm:mx-6 sm:mb-6 sm:p-5">
-              <div className="flex items-center justify-between gap-3">
-                <h4 className="text-xs font-semibold">Activity breakdown</h4>
-                <span className="text-[9px] text-[#657286]">
-                  Illustrative data
-                </span>
-              </div>
-
-              <div className="mt-5 space-y-5">
-                {dashboardActivities.map((activity) => (
-                  <div key={activity.name}>
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <span className="text-xs text-[#596579]">
-                        {activity.name}
-                      </span>
-                      <span className="text-xs font-medium">
-                        {activity.value}
-                      </span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[#d6deea]">
-                      <div
-                        className="h-full rounded-full bg-[#5366df]"
-                        style={{ width: `${activity.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 border-t border-[#e9eef5] bg-[#e9eef5]/50 px-5 py-4 sm:px-7">
-              <MessageSquareText className="mt-0.5 size-4 shrink-0 text-[#5366df]" />
-              <p className="text-[10px] leading-5 text-[#596579]">
-                This is a conceptual preview using sample figures, not a
-                screenshot of a live dashboard.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Explain the operating rhythm */}
-      <section
-        id="workflow"
-        className="bg-[#e9eef5] px-8 py-24 sm:px-14 lg:px-[10%] lg:py-32"
-      >
-        <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
-          <div>
-            <SectionEyebrow>How it works</SectionEyebrow>
-            <h2 className="mt-6 max-w-[440px] font-serif text-5xl font-normal leading-[0.91] tracking-[-0.065em] sm:text-7xl">
-              A better sales process starts with a better routine.
-            </h2>
-            <p className="mt-7 max-w-[340px] text-sm leading-7 text-[#596579]">
-              Give your team a repeatable way to work, while keeping the
-              flexibility to manage your own targets, people, and sales
-              approach.
-            </p>
-
-            <Link
-              href="/dashboard"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#111827] px-5 py-3 text-xs font-medium text-white transition hover:bg-[#333]"
-            >
-              Explore your workspace
-              <ArrowUpRight className="size-4" />
-            </Link>
-          </div>
-
-          <div className="divide-y divide-[#d6deea] border-y border-[#d6deea]">
-            {workflow.map((item) => (
-              <article
-                key={item.number}
-                className="grid gap-4 py-8 sm:grid-cols-[60px_1fr]"
-              >
-                <span className="font-serif text-3xl text-[#5366df]">
-                  {item.number}
-                </span>
-                <div>
-                  <h3 className="font-serif text-3xl tracking-[-0.045em]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-3 max-w-[420px] text-sm leading-7 text-[#596579]">
-                    {item.text}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Who the product is for */}
-      <section className="px-8 py-24 sm:px-14 lg:px-[10%] lg:py-32">
-        <div className="max-w-[700px]">
-          <SectionEyebrow>Built for the way you sell</SectionEyebrow>
-          <h2 className="mt-6 font-serif text-5xl font-normal leading-[0.92] tracking-[-0.065em] sm:text-7xl">
-            Whether you&apos;re a team of two or a team of twenty.
-          </h2>
-          <p className="mt-6 max-w-[490px] text-sm leading-7 text-[#596579]">
-            A structured sales workflow can make a difference at any stage.
-            Start with the processes your team needs today and build from there.
-          </p>
-        </div>
-
-        <div className="mt-14 grid gap-3 sm:grid-cols-2">
-          {useCases.map((item, index) => (
-            <article
-              key={item.title}
-              className={`rounded-xl p-7 sm:p-9 ${
-                index === 0 || index === 3
-                  ? "bg-[#07121f] text-[#f5f8fc]"
-                  : "border border-[#d6deea]"
-              }`}
-            >
-              <span
-                className={`text-[9px] tracking-[0.17em] ${
-                  index === 0 || index === 3
-                    ? "text-[#a5f36c]"
-                    : "text-[#5366df]"
-                }`}
-              >
-                {item.label}
-              </span>
-              <h3 className="mt-10 font-serif text-3xl tracking-[-0.045em] sm:text-4xl">
-                {item.title}
-              </h3>
-              <p
-                className={`mt-4 max-w-[390px] text-sm leading-7 ${
-                  index === 0 || index === 3
-                    ? "text-[#b5c0cf]"
-                    : "text-[#596579]"
-                }`}
-              >
-                {item.text}
-              </p>
-              <div
-                className={`mt-8 flex size-9 items-center justify-center rounded-full ${
-                  index === 0 || index === 3 ? "bg-white/10" : "bg-[#e9eef5]"
-                }`}
-              >
-                <ArrowUpRight
-                  className={`size-4 ${
-                    index === 0 || index === 3
-                      ? "text-[#a5f36c]"
-                      : "text-[#111827]"
-                  }`}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* 6. Benefits: translate features into business outcomes */}
-      <section className="bg-[#07121f] px-8 py-24 text-[#f5f8fc] sm:px-14 lg:px-[10%] lg:py-32">
-        <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <SectionEyebrow light>The bigger picture</SectionEyebrow>
-            <h2 className="mt-6 max-w-[490px] font-serif text-5xl font-normal leading-[0.91] tracking-[-0.065em] sm:text-7xl">
-              Don&apos;t just track sales. Improve how sales happen.
-            </h2>
-          </div>
-
-          <div className="divide-y divide-white/10 border-y border-white/10">
-            {outcomes.map(({ icon: Icon, title, text }) => (
-              <article key={title} className="flex gap-5 py-7 sm:py-8">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/10">
-                  <Icon className="size-4 text-[#a5f36c]" />
-                </div>
-                <div>
-                  <h3 className="font-serif text-2xl tracking-[-0.035em] sm:text-3xl">
-                    {title}
-                  </h3>
-                  <p className="mt-3 max-w-[420px] text-sm leading-7 text-[#b5c0cf]">
-                    {text}
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 7. Handle the buyer's hesitation */}
-      <section className="px-8 py-24 sm:px-14 lg:px-[10%] lg:py-28">
-        <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-          <div>
-            <SectionEyebrow>Built around your team</SectionEyebrow>
-            <h2 className="mt-6 max-w-[500px] font-serif text-5xl font-normal leading-[0.92] tracking-[-0.065em] sm:text-6xl">
-              Your sales process deserves more than another spreadsheet.
-            </h2>
-            <p className="mt-6 max-w-[430px] text-sm leading-7 text-[#596579]">
-              Keep the people, prospects, activities, and outcomes of your sales
-              operation connected in a workspace designed for the work your team
-              does every day.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              "Clear responsibilities for every salesperson",
-              "A consistent way to record outreach and progress",
-              "Better visibility into daily execution",
-              "One place to review team performance",
-            ].map((item) => (
-              <div
-                key={item}
-                className="flex items-start gap-4 rounded-xl border border-[#d6deea] p-5"
-              >
-                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#e9eef5]">
-                  <Check className="size-3.5 text-[#5366df]" />
-                </div>
-                <p className="text-sm leading-6">{item}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 8. Final conversion section */}
-      <section
-        id="pricing"
-        className="relative overflow-hidden bg-[#5366df] px-8 py-24 sm:px-14 lg:px-[10%] lg:py-32"
-      >
-        <div className="pointer-events-none absolute -right-20 -top-24 size-80 rounded-full border border-black/10 sm:size-[440px]" />
-        <div className="pointer-events-none absolute -right-8 -top-12 size-56 rounded-full border border-black/10 sm:size-[320px]" />
-
-        <div className="relative z-10 grid gap-10 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em]">
-              Take control of your sales process
-            </p>
-            <h2 className="mt-6 max-w-[740px] font-serif text-5xl font-normal leading-[0.87] tracking-[-0.065em] sm:text-7xl lg:text-8xl">
-              Make every sales activity count.
-            </h2>
-            <p className="mt-7 max-w-[460px] text-sm leading-7 text-[#07121f]">
-              Bring structure to your outreach, give your team clear priorities,
-              and get a better view of the work driving your business forward.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-start gap-4">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-3 rounded-full bg-[#111827] px-6 py-4 text-xs font-medium text-white transition hover:bg-[#333]"
-            >
-              Get started
-              <ArrowUpRight className="size-4" />
-            </Link>
-            <span className="text-[10px] text-[#07121f]">
-              Start building a clearer sales workflow.
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer
-        id="footer"
-        className="bg-[#f4f6f9] px-8 py-10 sm:px-14 lg:px-[10%]"
-      >
-        <div className="flex flex-col gap-8 border-b border-[#d6deea] pb-8 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 font-sans text-sm font-bold tracking-[-0.08em]"
-            >
-              <span>▰</span> / Dara.ai
-            </Link>
-            <p className="mt-4 max-w-[270px] text-xs leading-6 text-[#596579]">
-              A clearer way to organize sales activities, manage your team, and
-              keep opportunities moving.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-x-8 gap-y-4 text-xs">
-            <a href="#product" className="transition hover:text-[#5366df]">
-              Product
-            </a>
-            <a href="#solutions" className="transition hover:text-[#5366df]">
-              Why Dara
-            </a>
-            <a href="#workflow" className="transition hover:text-[#5366df]">
-              How it works
-            </a>
-            <Link href="/dashboard" className="transition hover:text-[#5366df]">
-              Log in
-            </Link>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 pt-6 text-[10px] text-[#657286] sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} Dara.ai</span>
-          <span>Built for teams that want to sell with clarity.</span>
-        </div>
-      </footer>
-    </main>
-  );
+    <footer id="footer" className={styles.footer}><div className={styles.footerTop}><div><Link href="/" className={styles.logo}><span className={styles.logoMark}><Radar size={21} /></span>Dara<span className={styles.logoDot}>.</span></Link><p>Find the right businesses.<br />Keep the next step in sight.</p></div><nav aria-label="Footer navigation"><a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="#faq">FAQs</a><Link href="/sign-in">Log in<ArrowUpRight size={13} /></Link></nav></div><div className={styles.footerBottom}><span>&copy; {new Date().getFullYear()} Dara</span><span>Built for focused prospecting and connected teams.</span></div></footer>
+  </main>
 }
+
+function PlusIcon() { return <span className={styles.faqIcon} aria-hidden="true">+</span> }
