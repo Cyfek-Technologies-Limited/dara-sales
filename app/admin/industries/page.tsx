@@ -88,10 +88,10 @@ export default async function IndustriesPage() {
   }))
 
   return (
-    <main className="min-h-screen bg-[#f4f6f9] p-3 text-[#07121f] md:p-4">
-      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
+    <main className="dashboard-page min-h-screen bg-[#f4f6f9] p-3 text-[#30263f] md:p-4">
+      <div className="dashboard-frame mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
         <DashboardSidebar role="ADMIN" userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} />
-        <section className="min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-5 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 md:py-7">
+        <section className="dashboard-content min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-5 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 md:py-7">
           <header className="border-b-[1px] border-black/30 pb-5">
             <p className="text-xs text-[#657286]">{organization.name} · Workspace</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Industries</h1>

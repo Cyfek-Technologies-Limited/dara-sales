@@ -55,10 +55,10 @@ export default async function AllLeadsPage() {
   )).rows as LeadRow[]
 
   return (
-    <main className="min-h-screen bg-[#f4f6f9] p-3 text-[#07121f] md:p-4">
-      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
+    <main className="dashboard-page min-h-screen bg-[#f4f6f9] p-3 text-[#30263f] md:p-4">
+      <div className="dashboard-frame mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
     <DashboardSidebar role="STAFF" userName={session.user.name || session.user.email} userEmail={session.user.email} organizationName={member.organizationName} jobTitle={member.jobTitle || 'Sales team member'} industry={member.industryName || null} />
-        <section className="min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-5 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 md:py-7">
+        <section className="dashboard-content min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-5 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 md:py-7">
           <header className="flex flex-col justify-between gap-4 border-b-[1px] border-black/30 pb-5 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs text-[#657286]">{member.organizationName} · {member.jobTitle || 'Sales team member'}</p>
@@ -66,7 +66,7 @@ export default async function AllLeadsPage() {
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#657286]">Your complete list of businesses, including leads you contacted on earlier days.</p>
               <Link href="/dashboard/leads" className="mt-3 inline-block text-xs font-semibold underline">View today&apos;s leads</Link>
             </div>
-            <span className="rounded-full bg-[#e9eef5] px-3 py-2 text-xs font-semibold">{leads.length} {leads.length === 1 ? 'business' : 'businesses'}</span>
+            <span className="rounded-full bg-[#eee9f1] px-3 py-2 text-xs font-semibold">{leads.length} {leads.length === 1 ? 'business' : 'businesses'}</span>
           </header>
 
           <section className="mt-5 overflow-hidden rounded-2xl border-[1px] border-black/30 bg-white">
@@ -75,7 +75,7 @@ export default async function AllLeadsPage() {
                 <thead className="bg-[#f4f6f9] text-[10px] uppercase tracking-[0.12em] text-[#657286]"><tr><th className="px-5 py-3">Business / contact</th><th className="px-5 py-3">Stage</th><th className="px-5 py-3">Outreach</th><th className="px-5 py-3">Last contacted</th><th className="px-5 py-3">Advertiser spend</th></tr></thead>
                 <tbody className="divide-y divide-black/30">{leads.map((lead) => <tr key={lead.id}>
                   <td className="px-5 py-4"><p className="font-semibold">{lead.businessName}</p><p className="mt-1 text-[11px] text-[#657286]">{lead.contactName || 'Contact not added'}{lead.industry ? ` · ${lead.industry}` : ''}{lead.categoryName ? ` · ${lead.categoryName}` : ''}</p><p className="mt-1 text-[11px] text-[#657286]">{[lead.email, lead.phone].filter(Boolean).join(' · ') || 'No contact details'}</p>{lead.website && <a className="mt-1 inline-block text-[11px] underline" href={lead.website} target="_blank" rel="noreferrer">Website</a>}</td>
-                  <td className="px-5 py-4"><span className="rounded-full bg-[#e9eef5] px-3 py-1.5 text-[10px] font-semibold">{stageLabel(lead.stage)}</span></td>
+                  <td className="px-5 py-4"><span className="rounded-full bg-[#eee9f1] px-3 py-1.5 text-[10px] font-semibold">{stageLabel(lead.stage)}</span></td>
                   <td className="px-5 py-4 font-medium">{lead.outreachCount} {lead.outreachCount === 1 ? 'touch' : 'touches'}</td>
                   <td className="px-5 py-4 text-[#657286]">{dateLabel(lead.lastOutreachAt)}</td>
                   <td className="px-5 py-4 font-semibold">{money(lead.advertiserSpend)}</td>

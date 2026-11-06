@@ -173,11 +173,11 @@ export function IndustryManager({
             required
             maxLength={80}
             placeholder="For example, e-commerce and retail"
-            className="min-w-0 flex-1 rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#07121f]/15"
+            className="min-w-0 flex-1 rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#30263f]/15"
           />
           <button
             disabled={pending}
-            className="rounded-xl bg-[#07121f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            className="rounded-xl bg-[#30263f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
             {pending ? "Adding…" : "Add industry"}
           </button>
