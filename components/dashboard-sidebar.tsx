@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { CircleHelp, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target, Tags } from 'lucide-react'
+import { CircleHelp, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target, Tags, Search } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { InviteLinkButton } from '@/components/invite-link-button'
 
@@ -11,6 +11,7 @@ type DashboardRole = 'ADMIN' | 'STAFF'
 const adminWorkspaceLinks = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Leads', href: '/admin/leads', icon: ContactRound },
+  { label: 'AI Prospecting', href: '/admin/prospecting', icon: Search },
   { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
   { label: 'Team', href: '/admin/team', icon: Users },
   { label: 'Industries', href: '/admin/industries', icon: Tags },
