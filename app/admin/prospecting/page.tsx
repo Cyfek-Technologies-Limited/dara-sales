@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { pool } from "@/lib/db";
 import { DashboardSidebar } from "@/components/dashboard-sidebar";
 import ProspectingWorkbench from "@/components/prospecting-workbench";
+import { cleanProspectingDraft } from "@/lib/prospecting-draft";
 
 export default async function ProspectingPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -17,7 +18,7 @@ export default async function ProspectingPage() {
   ).rows[0];
   if (!organization) redirect("/onboarding");
 
-  const [categories, teammates] = await Promise.all([
+  const [categories, teammates, preference] = await Promise.all([
     pool.query(
       `SELECT c."id", c."name", i."name" AS "industryName", i."id" AS "industryId"
        FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId"
@@ -31,6 +32,12 @@ export default async function ProspectingPage() {
        ORDER BY u."name", u."email"`,
       [organization.id]
     ),
+    pool.query(`SELECT "form", "updatedAt" FROM "ProspectingPreference" WHERE "organizationId" = $1 AND "authUserId" = $2`, [organization.id, session.user.id])
+      .catch((error: { code?: string }) => {
+        // Browser drafts still work during deployment before the migration runs.
+        if (error.code === '42P01') return { rows: [] }
+        throw error
+      }),
   ]);
 
   return (
@@ -56,8 +63,12 @@ export default async function ProspectingPage() {
             </p>
           </header> */}
           <ProspectingWorkbench
+            key={`${organization.id}:${session.user.id}`}
             categories={categories.rows}
             teammates={teammates.rows}
+            storageKey={`dara:prospecting:${organization.id}:${session.user.id}`}
+            initialDraft={cleanProspectingDraft(preference.rows[0]?.form)}
+            draftUpdatedAt={preference.rows[0]?.updatedAt ? new Date(preference.rows[0].updatedAt).getTime() : 0}
           />
         </section>
       </div>

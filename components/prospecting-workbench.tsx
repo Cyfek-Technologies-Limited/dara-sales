@@ -4,47 +4,70 @@ import { FormEvent, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, ExternalLink, LoaderCircle, Plus, Search, Radar } from 'lucide-react'
+import { useProspectingDraft } from '@/components/use-prospecting-draft'
+import { type ProspectingDraft } from '@/lib/prospecting-draft'
 
 type Suggestion = { name: string; reason: string; subcategories: string[] }
 type Category = { id: string; name: string; industryName: string; industryId: string }
 type Teammate = { id: string; name: string | null; email: string }
-type Business = { businessName: string; summary: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
+type Business = { businessName: string; summary: string; buyerReason?: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
 
 const fieldClassName = 'mt-1.5 w-full rounded-xl border-[1px] border-black/30 bg-white px-3.5 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-[#173b65] focus:ring-4 focus:ring-[#dbe5f0] disabled:cursor-wait'
 const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-900', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-900', 'bg-emerald-100 text-emerald-900', 'bg-[#dbe5f0] text-[#0b1f3a]']
 
-export default function ProspectingWorkbench({ categories, teammates }: { categories: Category[]; teammates: Teammate[] }) {
+export default function ProspectingWorkbench({ categories, teammates, storageKey, initialDraft, draftUpdatedAt }: { categories: Category[]; teammates: Teammate[]; storageKey: string; initialDraft: ProspectingDraft; draftUpdatedAt: number }) {
   const router = useRouter()
-  const [offering, setOffering] = useState('')
-  const [location, setLocation] = useState('')
+  const { form, update, status: draftStatus, ready } = useProspectingDraft(storageKey, initialDraft, draftUpdatedAt)
+  const { offering, businessInput = offering || form.websiteUrl || '', location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit, ownerId } = form
+  const setOffering = (value: string) => update('offering', value)
+  const setLocation = (value: string) => update('location', value)
+  const setCategoryId = (value: string) => update('categoryId', value)
+  const setKeywords = (value: string) => update('keywords', value)
+  const setBusinessSize = (value: string) => update('businessSize', value)
+  const setContactPreference = (value: string) => update('contactPreference', value)
+  const setExclusions = (value: string) => update('exclusions', value)
+  const setResultLimit = (value: string) => update('resultLimit', value)
+  const setOwnerId = (value: string) => update('ownerId', value)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [businesses, setBusinesses] = useState<Business[]>([])
-  const [categoryId, setCategoryId] = useState('')
-  const [keywords, setKeywords] = useState('')
-  const [businessSize, setBusinessSize] = useState('ANY')
-  const [contactPreference, setContactPreference] = useState('ANY')
-  const [exclusions, setExclusions] = useState('')
-  const [resultLimit, setResultLimit] = useState('8')
   const [resultContext, setResultContext] = useState<{ categoryId: string; location: string } | null>(null)
-  const [ownerId, setOwnerId] = useState('')
   const [loading, setLoading] = useState('')
   const [savingName, setSavingName] = useState('')
   const [savingLeadKey, setSavingLeadKey] = useState('')
   const [leadStatuses, setLeadStatuses] = useState<Record<string, { kind: 'success' | 'error'; message: string }>>({})
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [websiteSources, setWebsiteSources] = useState<string[]>([])
   const selectedOwnerId = teammates.some((teammate) => teammate.id === ownerId) ? ownerId : ''
+
+  const isWebsiteInput = /^(?:https?:\/\/|www\.)\S+$/i.test(businessInput.trim()) || /^[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/?#]\S*)?$/i.test(businessInput.trim())
+
+  function changeBusinessInput(value: string) {
+    update('businessInput', value)
+    const isUrl = /^(?:https?:\/\/|www\.)\S+$/i.test(value.trim()) || /^[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/?#]\S*)?$/i.test(value.trim())
+    update('websiteUrl', isUrl ? value : '')
+    setOffering(isUrl ? '' : value)
+    setWebsiteSources([])
+  }
 
   async function suggestIndustries(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setLoading('suggest'); setError(''); setMessage(''); setSuggestions([])
+    if (loading) return
+    setLoading(isWebsiteInput ? 'website' : 'suggest'); setError(''); setMessage(''); setSuggestions([]); setWebsiteSources([])
     try {
-      const response = await fetch('/api/admin/prospecting/suggest', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ offering, location }) })
+      const response = await fetch('/api/admin/prospecting/suggest', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(isWebsiteInput ? { websiteUrl: businessInput.trim(), location } : { offering: businessInput, location }),
+        signal: AbortSignal.timeout(isWebsiteInput ? 80000 : 40000),
+      })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Could not suggest industries.')
+      if (isWebsiteInput) setOffering(data.offering)
       setSuggestions(data.industries)
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not suggest industries.') }
-    finally { setLoading('') }
+      setWebsiteSources(data.sourceUrls || [])
+    } catch (cause) {
+      setError(cause instanceof Error && cause.name === 'TimeoutError' ? 'Research took too long. Try again, or enter a brief description of your business.' : cause instanceof Error ? cause.message : 'Could not suggest industries.')
+    } finally { setLoading('') }
   }
 
   async function saveSuggestion(suggestion: Suggestion) {
@@ -61,6 +84,7 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
 
   async function searchBusinesses(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (loading) return
     setLoading('search'); setError(''); setMessage(''); setBusinesses([]); setLeadStatuses({})
     try {
       const response = await fetch('/api/admin/prospecting/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ offering, location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit: Number(resultLimit) }) })
@@ -68,7 +92,7 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
       if (!response.ok) throw new Error(data.error || 'Could not search for businesses.')
       setBusinesses(data.businesses || [])
       setResultContext({ categoryId, location })
-      if (!data.businesses?.length) setMessage('No sourced businesses matched this search. Try a broader location, fewer keywords, or a less restrictive contact preference.')
+      if (!data.businesses?.length) setMessage('No sourced potential buyers matched this search. Sellers and suppliers of your offering are excluded. Try a broader location or another customer category.')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not search for businesses.') }
     finally { setLoading('') }
   }
@@ -102,14 +126,26 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
   const feedback = error || message
 
   return <div className="mt-5 space-y-4">
-    <section className="rounded-2xl border-[1px] border-black/30 bg-gradient-to-br from-[#f1f4f8] via-white to-[#edf2f7] p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#102842] text-white shadow-md shadow-[#0b1f3a]/20"><Radar className="size-5" /></span><div><h2 className="text-lg font-bold text-[#0b1f3a]">Find your best-fit industries</h2><p className="mt-1 text-xs leading-5 text-[#475569]">Describe what you sell and the location you want to reach. AI will suggest relevant industries and six subcategories for each.</p></div></div>
-      <form onSubmit={suggestIndustries} className="mt-5 grid gap-3 sm:grid-cols-2"><label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">What product or service are you selling?<textarea required maxLength={500} value={offering} onChange={(event) => setOffering(event.target.value)} placeholder="For example: digital outdoor signage and campaign placement for local brands" className={`${fieldClassName} min-h-24 resize-y`} /></label><label className="text-[13px] font-semibold text-slate-800">Target location<input required maxLength={160} value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Lagos, Nigeria" className={fieldClassName} /></label><div className="flex items-end"><button disabled={loading === 'suggest'} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0b1f3a]/20 transition hover:bg-[#142e50] focus-visible:ring-4 focus-visible:ring-[#c9d8e8] disabled:cursor-not-allowed disabled:opacity-60">{loading === 'suggest' ? <LoaderCircle className="size-4 animate-spin" /> : <Radar className="size-4" />}{loading === 'suggest' ? 'Finding industries…' : 'Suggest industries'}</button></div></form>
+    <section className="rounded-2xl border-[1px] border-black/30 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#102842] text-white"><Radar className="size-5" /></span><div><h1 className="text-lg font-bold text-[#0b1f3a]">Tell us about your business</h1><p className="mt-1 text-xs leading-5 text-[#475569]">Describe your business, product, or service, or paste your website URL. Dara will suggest industries that could become your customers or clients.</p></div></div>
+      <form onSubmit={suggestIndustries} className="mt-5">
+        <fieldset disabled={!ready || Boolean(loading)} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
+          <label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">Tell us about your business / enter your business URL<textarea required maxLength={600} value={businessInput} onChange={event => changeBusinessInput(event.target.value)} placeholder="Describe your business or paste your business URL" className={`${fieldClassName} min-h-24 resize-y`} /><span className="mt-1 block text-[11px] font-normal leading-5 text-slate-600">For example: We are an advertising agency helping brands promote their products. Or simply paste https://yourbusiness.com.</span></label>
+          <label className="text-[13px] font-semibold text-slate-800">Target customer location<input required maxLength={160} value={location} onChange={event => setLocation(event.target.value)} placeholder="Lagos, Nigeria" className={fieldClassName} /></label>
+          <div className="flex items-end"><button disabled={!businessInput.trim() || !location.trim()} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#142e50] disabled:cursor-not-allowed disabled:opacity-50">{loading === 'website' || loading === 'suggest' ? <LoaderCircle className="size-4 animate-spin" /> : <Radar className="size-4" />}{loading === 'website' ? 'Reading your website...' : loading === 'suggest' ? 'Finding industries...' : 'Suggest industries'}</button></div>
+        </fieldset>
+      </form>
+      <p role="status" className="mt-3 text-xs text-slate-600">{ready ? draftStatus : 'Restoring your saved inputs...'}</p>
+      {error && <p role="alert" className="mt-4 rounded-xl border border-rose-300 bg-rose-100 p-3 text-xs leading-5 text-rose-900">{error}</p>}
+      {isWebsiteInput && offering && <label className="mt-4 block text-xs font-semibold text-slate-800">Business description from your website<textarea maxLength={500} value={offering} onChange={event => setOffering(event.target.value)} disabled={Boolean(loading)} className={`${fieldClassName} min-h-24 resize-y`} /><span className="mt-1 block font-normal text-slate-600">Review or edit this summary before finding businesses.</span></label>}
+      {websiteSources.length > 0 && <div className="mt-4 rounded-xl bg-[#edf2f7] p-4"><p className="text-xs font-semibold text-[#0b1f3a]">Pages used to understand your business</p><ul className="mt-2 space-y-2">{websiteSources.map(url => <li key={url}><a href={url} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 text-xs text-[#173b65] underline"><span className="truncate">{url}</span><ExternalLink className="size-3 shrink-0" /></a></li>)}</ul></div>}
       {suggestions.length > 0 && <div className="mt-5 grid gap-3 lg:grid-cols-2">{suggestions.map((suggestion) => <article key={suggestion.name} className="rounded-xl border-[1px] border-black/30 bg-white p-4 shadow-sm transition hover:shadow-md"><div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold">{suggestion.name}</h3><p className="mt-1 text-xs leading-5 text-[#475569]">{suggestion.reason}</p></div><button type="button" onClick={() => saveSuggestion(suggestion)} disabled={Boolean(savingName)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border-[1px] border-black/30 bg-[#0b1f3a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#142e50] disabled:opacity-50">{savingName === suggestion.name ? <LoaderCircle className="size-3 animate-spin" /> : <Plus className="size-3" />}Add industry</button></div><div className="mt-3 flex flex-wrap gap-1.5">{suggestion.subcategories.map((category, index) => <span key={category} className={`rounded-full px-3 py-1.5 text-[11px] font-semibold ${categoryColors[index % categoryColors.length]}`}>{category}</span>)}</div></article>)}</div>}
     </section>
 
     <section className="rounded-2xl border-[1px] border-black/30 bg-gradient-to-br from-[#f1f4f8] via-white to-[#edf2f7] p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#102842] text-white shadow-md shadow-[#0b1f3a]/20"><Search className="size-5" /></span><div><h2 className="text-lg font-bold text-[#0b1f3a]">Discover businesses</h2><p className="mt-1 text-xs leading-5 text-[#475569]">Search current web results for businesses in a saved category. Review the official website and source page before adding any prospect.</p></div></div>
       {categories.length ? <form onSubmit={searchBusinesses} className="mt-5">
-        <fieldset disabled={loading === 'search'} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
+        <p className="mb-4 rounded-xl border border-[#b9cbe0] bg-[#e5edf6] p-3 text-xs leading-5 text-[#0b1f3a]">Search targets potential customers who use what you sell. Businesses selling, distributing, or supplying the same offering are excluded.</p>
+        <fieldset disabled={!ready || Boolean(loading)} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
           <label className="text-[13px] font-semibold text-slate-800">Industry category
             <select required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className={fieldClassName}>
               <option value="">Choose a category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.industryName} / {category.name}</option>)}
@@ -118,9 +154,6 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
           <label className="text-[13px] font-semibold text-slate-800">Target location
             <input required maxLength={160} value={location} onChange={(event) => setLocation(event.target.value)} placeholder="For example: Ikeja, Lagos, Nigeria" className={fieldClassName} />
             <span className="mt-1 block text-[11px] font-normal text-[#475569]">Use a country, city, or neighbourhood to focus the search.</span>
-          </label>
-          <label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">Product or service you sell
-            <textarea required maxLength={500} value={offering} onChange={(event) => setOffering(event.target.value)} placeholder="What do you offer these businesses?" className={`${fieldClassName} min-h-24 resize-y`} />
           </label>
           <label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">Search keywords <span className="font-normal text-[#475569]">(optional)</span>
             <input maxLength={300} value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder="For example: food manufacturers, factories, packaging plants" className={fieldClassName} />
@@ -181,6 +214,7 @@ export default function ProspectingWorkbench({ categories, teammates }: { catego
               <div className="min-w-0">
                 <h4 className="font-semibold">{business.businessName}</h4>
                 <p className="mt-1 text-xs leading-5 text-[#475569]">{business.summary}</p>
+                {business.buyerReason && <p className="mt-2 rounded-lg bg-[#edf2f7] p-3 text-xs leading-5 text-[#0b1f3a]"><strong>Why they may need your offering: </strong>{business.buyerReason}</p>}
                 {(business.publicEmail || business.publicPhone) && <div className="mt-2 space-y-1 text-xs text-[#475467]">
                   {business.publicEmail && <p>Email: <a className="font-medium text-[#173b65] hover:underline" href={'mailto:' + business.publicEmail}>{business.publicEmail}</a></p>}
                   {business.publicPhone && <p>Phone: <a className="font-medium text-[#173b65] hover:underline" href={'tel:' + business.publicPhone}>{business.publicPhone}</a></p>}

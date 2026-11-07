@@ -1,7 +1,10 @@
 import { headers } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
+import { prepareEmailAutomation, processEmailQueue } from '@/lib/smartlead'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
+
+export const maxDuration = 60
 
 async function getAdmin() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -63,11 +66,13 @@ export async function POST(request: Request) {
 
   const leadId = crypto.randomUUID()
   try {
+    await prepareEmailAutomation(admin.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))
     await pool.query(
       `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "updatedAt")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())`,
       [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${contactSourceUrl ? ` | Contact source: ${contactSourceUrl}` : ''}`, summary],
     )
+    after(() => processEmailQueue(admin.organizationId).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, id: leadId, ownerId }, { status: 201 })
   } catch (error) {
     console.error('[prospecting] Could not save business lead', error instanceof Error ? error.message : 'unknown')

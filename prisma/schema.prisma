@@ -31,6 +31,11 @@ model Organization {
   activities        Activity[]
   salesLeads        SalesLead[]
   salesOutreach     SalesOutreach[]
+  emailAutomation   EmailAutomation?
+  emailSyncJobs     EmailSyncJob[]
+  prospectingPreferences ProspectingPreference[]
+  emailSenders      OrganizationEmailSender[]
+  mailboxOAuthStates MailboxOAuthState[]
 
   @@index([status])
   @@schema("public")
@@ -196,6 +201,7 @@ model SalesLead {
   organization         Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   industryCategory    IndustryCategory? @relation(fields: [industryCategoryId], references: [id], onDelete: SetNull)
   outreach             SalesOutreach[]
+  emailSyncJobs        EmailSyncJob[]
 
   @@index([organizationId, ownerId, stage])
   @@index([ownerId, createdAt])
@@ -219,5 +225,86 @@ model SalesOutreach {
   @@index([organizationId, occurredAt])
   @@index([ownerId, occurredAt])
   @@index([leadId, occurredAt])
+  @@schema("public")
+}
+
+model EmailAutomation {
+  organizationId  String       @id
+  encryptedApiKey String       @default("")
+  campaignId      String       @default("")
+  campaignName    String
+  enabled         Boolean      @default(false)
+  subject         String       @default("")
+  message         String       @default("")
+  companyAddress  String       @default("")
+  industryId      String?
+  senderId        String?
+  legacyCampaignId String?
+  status          String       @default("DRAFT")
+  sender          OrganizationEmailSender? @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  updatedAt       DateTime     @default(now()) @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@schema("public")
+}
+
+model OrganizationEmailSender {
+  id                String       @id @default(uuid())
+  organizationId    String
+  providerAccountId String       @unique
+  googleSubject     String?      @unique
+  email             String
+  verifiedAt        DateTime
+  createdAt         DateTime     @default(now())
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  automations       EmailAutomation[]
+
+  @@index([organizationId])
+  @@schema("public")
+}
+
+model MailboxOAuthState {
+  id             String       @id
+  organizationId String
+  authUserId     String
+  browserHash    String
+  codeVerifier   String
+  expiresAt      DateTime     @db.Timestamptz(3)
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@schema("public")
+}
+
+model ProspectingPreference {
+  organizationId String
+  authUserId     String
+  form           Json         @default("{}")
+  updatedAt      DateTime     @default(now()) @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, authUserId])
+  @@schema("public")
+}
+
+model EmailSyncJob {
+  id             String       @id @default(uuid())
+  organizationId String
+  leadId         String
+  email          String
+  campaignId     String
+  status         String       @default("QUEUED")
+  attempts       Int          @default(0)
+  lastError      String?
+  availableAt    DateTime     @default(now())
+  lockedUntil    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead           SalesLead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email])
+  @@index([status, availableAt])
   @@schema("public")
 }

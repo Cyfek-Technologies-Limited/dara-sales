@@ -1,7 +1,10 @@
 import { headers } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
+import { prepareEmailAutomation, processEmailQueue } from '@/lib/smartlead'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
+
+export const maxDuration = 60
 
 const channels = ['SOCIAL_MEDIA', 'WEBSITE', 'EMAIL', 'PHONE', 'IN_PERSON', 'OTHER']
 
@@ -61,6 +64,7 @@ export async function POST(request: Request) {
   )).rows[0]
   if (!category) return NextResponse.json({ error: 'Choose a subcategory under your assigned industry.' }, { status: 400 })
 
+  await prepareEmailAutomation(staff.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -75,6 +79,7 @@ export async function POST(request: Request) {
       [crypto.randomUUID(), staff.organizationId, leadId, staff.userId, channel, body.platform || null, body.note || null],
     )
     await client.query('COMMIT')
+    after(() => processEmailQueue(staff.organizationId).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, id: leadId }, { status: 201 })
   } catch (error) {
     await client.query('ROLLBACK')

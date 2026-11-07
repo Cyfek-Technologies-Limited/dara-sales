@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { CircleHelp, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target, Tags, Search, Menu, X, ArrowUpRight, Radar } from 'lucide-react'
+import { CircleHelp, ContactRound, LayoutDashboard, LogOut, Settings, Sparkles, TrendingUp, Users, Target, Tags, Search, Menu, X, ArrowUpRight, Radar, Mail } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { InviteLinkButton } from '@/components/invite-link-button'
 
@@ -13,6 +13,7 @@ const adminWorkspaceLinks = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { label: 'Leads', href: '/admin/leads', icon: ContactRound },
   { label: 'AI Prospecting', href: '/admin/prospecting', icon: Search },
+  { label: 'Email outreach', href: '/admin/email-outreach', icon: Mail },
   { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
   { label: 'Team', href: '/admin/team', icon: Users },
   { label: 'Industries', href: '/admin/industries', icon: Tags },
