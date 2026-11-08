@@ -13,15 +13,23 @@ export const prepareEmailAutomation = getEmailServerConfig
 
 export async function queueSavedLeads(organizationId?: string) {
   await pool.query(`INSERT INTO "EmailSyncJob" ("id", "organizationId", "leadId", "email", "campaignId")
-    SELECT gen_random_uuid()::text, l."organizationId", l."id", LOWER(TRIM(l."email")), a."campaignId"
-    FROM "SalesLead" l JOIN "EmailAutomation" a ON a."organizationId" = l."organizationId"
-    JOIN "OrganizationEmailSender" s ON s."id" = a."senderId" AND s."organizationId" = a."organizationId"
-    LEFT JOIN "IndustryCategory" c ON c."id" = l."industryCategoryId"
-    WHERE ($1::text IS NULL OR l."organizationId" = $1) AND a."enabled" AND a."status" = 'READY'
-      AND a."campaignId" LIKE 'smtp:%' AND s."smtpPassword" IS NOT NULL AND l."stage" = 'LEAD'
-      AND (a."industryId" IS NULL OR c."industryId" = a."industryId")
-      AND LENGTH(TRIM(l."email")) <= 254 AND TRIM(l."email") ~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'
-    ON CONFLICT ("organizationId", "email") DO UPDATE SET "campaignId" = EXCLUDED."campaignId", "status" = 'QUEUED', "lastError" = NULL, "updatedAt" = NOW()
+    SELECT gen_random_uuid()::text, candidate."organizationId", candidate."leadId", candidate."email", candidate."campaignId"
+    FROM (
+      -- Deduplicate before generating IDs: the conflict key is organization/email,
+      -- while different lead records can share the same normalized inbox.
+      SELECT DISTINCT ON (l."organizationId", LOWER(TRIM(l."email")))
+        l."organizationId", l."id" AS "leadId", LOWER(TRIM(l."email")) AS "email", a."campaignId"
+      FROM "SalesLead" l JOIN "EmailAutomation" a ON a."organizationId" = l."organizationId"
+      JOIN "OrganizationEmailSender" s ON s."id" = a."senderId" AND s."organizationId" = a."organizationId"
+      LEFT JOIN "IndustryCategory" c ON c."id" = l."industryCategoryId"
+      WHERE ($1::text IS NULL OR l."organizationId" = $1) AND a."enabled" AND a."status" = 'READY'
+        AND a."campaignId" LIKE 'smtp:%' AND s."smtpPassword" IS NOT NULL AND l."stage" = 'LEAD'
+        AND (a."industryId" IS NULL OR c."industryId" = a."industryId")
+        AND LENGTH(TRIM(l."email")) <= 254 AND TRIM(l."email") ~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'
+      ORDER BY l."organizationId", LOWER(TRIM(l."email")), l."createdAt", l."id"
+    ) candidate WHERE TRUE
+    ON CONFLICT ("organizationId", "email") DO UPDATE SET "campaignId" = EXCLUDED."campaignId", "leadId" = EXCLUDED."leadId",
+      "status" = 'QUEUED', "lastError" = NULL, "availableAt" = NOW(), "lockedUntil" = NULL, "updatedAt" = NOW()
     WHERE "EmailSyncJob"."status" = 'CANCELLED' AND "EmailSyncJob"."attempts" = 0`, [organizationId || null])
 }
 

@@ -11,6 +11,13 @@ const pool = new Pool({ connectionString: dbUrl.toString(), connectionTimeoutMil
     LEFT JOIN "EmailSyncJob" j ON j."organizationId" = a."organizationId" AND j."campaignId" = a."campaignId"
     GROUP BY a."organizationId", a."enabled", a."status", a."campaignId", s."id", s."smtpPassword"`);
   console.log(JSON.stringify(results.rows));
+  const duplicates = await pool.query(`SELECT COUNT(*)::int AS "duplicateInboxGroups", COALESCE(SUM(n - 1), 0)::int AS "extraLeadRecords"
+    FROM (SELECT COUNT(*) AS n FROM "SalesLead" l JOIN "EmailAutomation" a ON a."organizationId" = l."organizationId"
+      LEFT JOIN "IndustryCategory" c ON c."id" = l."industryCategoryId"
+      WHERE a."enabled" = TRUE AND a."status" = 'READY' AND l."stage" = 'LEAD' AND NULLIF(TRIM(l."email"),'') IS NOT NULL
+      AND (a."industryId" IS NULL OR c."industryId" = a."industryId")
+      GROUP BY l."organizationId", LOWER(TRIM(l."email")) HAVING COUNT(*) > 1) grouped`);
+  console.log(JSON.stringify(duplicates.rows));
   const selection = await pool.query(`SELECT a."organizationId" FROM "EmailAutomation" a
     JOIN "EmailSyncJob" j ON j."organizationId" = a."organizationId" AND j."campaignId" = a."campaignId"
     WHERE a."enabled" = TRUE AND a."campaignId" LIKE 'smtp:%' AND j."status" = 'QUEUED' AND j."availableAt" <= NOW()
