@@ -2,9 +2,10 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Mail, RefreshCw, ArrowRight, CircleCheck } from 'lucide-react'
+import { Mail, RefreshCw, ArrowRight, CircleCheck, PenLine } from 'lucide-react'
 
 type Data = {
+  businessDescription: string
   mailboxConnectionAvailable: boolean
   automation: { configured: boolean; enabled: boolean }
   profile: { enabled: boolean; subject: string; message: string; companyAddress: string; industryId: string | null; senderId: string | null } | null
@@ -22,6 +23,9 @@ export default function EmailOutreachManager() {
   const [profile, setProfile] = useState({ subject: '', message: '', companyAddress: '', industryId: '', senderId: '' })
   const [approved, setApproved] = useState(false)
   const [connecting, setConnecting] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [businessDescription, setBusinessDescription] = useState('')
+  const [draft, setDraft] = useState<{ subject: string; message: string } | null>(null)
   const [mailbox, setMailbox] = useState({ senderName: '', email: '', host: '', port: '587', password: '' })
 
   const load = useCallback(async (initialize = false) => {
@@ -29,6 +33,7 @@ export default function EmailOutreachManager() {
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || 'Could not load outreach activity.')
     setData(result)
+    if (initialize) setBusinessDescription(result.businessDescription || '')
     if (initialize) setProfile({ subject: result.profile?.subject || '', message: result.profile?.message || '', companyAddress: result.profile?.companyAddress || '', industryId: result.profile?.industryId || '', senderId: result.profile?.senderId || '' })
   }, [])
   useEffect(() => {
@@ -38,6 +43,20 @@ export default function EmailOutreachManager() {
     }, 20000)
     return () => clearInterval(timer)
   }, [load])
+
+  async function generateEmail() {
+    setGenerating(true); setError(''); setMessage(''); setDraft(null)
+    try {
+      const response = await fetch('/api/admin/email-outreach/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessDescription, industryId: profile.industryId }), signal: AbortSignal.timeout(55000),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not generate your email.')
+      setDraft({ subject: result.subject, message: result.message })
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not generate your email.') }
+    finally { setGenerating(false) }
+  }
 
   async function connectMailbox(event: FormEvent) {
     event.preventDefault(); setConnecting(true); setError(''); setMessage('')
@@ -64,6 +83,7 @@ export default function EmailOutreachManager() {
     finally { setBusy(false) }
   }
   async function updateOutreach(action: 'save' | 'activate' | 'pause') {
+    if (generating) return
     setBusy(true); setError(''); setMessage('')
     try {
       const response = await fetch('/api/admin/email-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...profile, action, confirmed: approved }), signal: AbortSignal.timeout(115000) })
@@ -98,7 +118,7 @@ export default function EmailOutreachManager() {
           <label className="text-sm font-semibold">Business sender name<input required maxLength={120} value={mailbox.senderName} onChange={e => setMailbox({ ...mailbox, senderName: e.target.value })} className={field} placeholder="Your business name" /></label>
           <label className="text-sm font-semibold">Business email<input required type="email" autoComplete="username" value={mailbox.email} onChange={e => setMailbox({ ...mailbox, email: e.target.value })} className={field} placeholder="you@yourbusiness.com" /></label>
           <label className="text-sm font-semibold">SMTP server<input required value={mailbox.host} onChange={e => setMailbox({ ...mailbox, host: e.target.value })} className={field} placeholder="smtp.yourprovider.com" /></label>
-          <label className="text-sm font-semibold">Secure SMTP port<select value={mailbox.port} onChange={e => setMailbox({ ...mailbox, port: e.target.value })} className={field}><option value="587">587 ? STARTTLS</option><option value="465">465 ? TLS</option></select></label>
+          <label className="text-sm font-semibold">Secure SMTP port<select value={mailbox.port} onChange={e => setMailbox({ ...mailbox, port: e.target.value })} className={field}><option value="587">587 - STARTTLS</option><option value="465">465 - TLS</option></select></label>
           <label className="text-sm font-semibold sm:col-span-2">SMTP password / app password<input required type="password" autoComplete="new-password" value={mailbox.password} onChange={e => setMailbox({ ...mailbox, password: e.target.value })} className={field} /></label>
         </fieldset>
         <p className="text-xs leading-5 text-slate-600 sm:col-span-2">Use the SMTP settings from your email provider. Some providers require a separate app password or disable password-based SMTP. Connecting checks sign-in without sending an email. Pause outreach before changing mailbox settings.</p>
@@ -109,14 +129,28 @@ export default function EmailOutreachManager() {
     </section>
     <form onSubmit={saveMessage} className="space-y-4 rounded-2xl border-[1px] border-black/30 bg-white p-6">
       <h2 className="text-lg font-bold">Your message and audience</h2><p className="text-sm leading-6 text-slate-600">Choose who your organization wants to reach and approve its own email. Dara sends through your connected business mailbox automatically.</p>
-      <fieldset disabled={busy || Boolean(data?.profile?.enabled)} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
+      <fieldset disabled={busy || generating || Boolean(data?.profile?.enabled)} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
         <label className="text-sm font-semibold">Send from<select value={profile.senderId} onChange={event => { setProfile({ ...profile, senderId: event.target.value }); setApproved(false) }} className={field}><option value="">Choose your connected business email</option>{data?.senders.map(sender => <option key={sender.id} value={sender.id}>{sender.email}</option>)}</select>{data && !data.senders.length && <span className="mt-2 block text-xs font-normal leading-5 text-amber-800">No business mailbox is connected to this organization yet. You can save your message now; a verified mailbox connection is required before sending.</span>}</label>
-        <label className="text-sm font-semibold">Target industry<select value={profile.industryId} onChange={event => { setProfile({ ...profile, industryId: event.target.value }); setApproved(false) }} className={field}><option value="">All my saved lead industries</option>{data?.industries.map(industry => <option key={industry.id} value={industry.id}>{industry.name}</option>)}</select></label>
+        <label className="text-sm font-semibold">Target industry<select value={profile.industryId} onChange={event => { setProfile({ ...profile, industryId: event.target.value }); setApproved(false); setDraft(null) }} className={field}><option value="">All my saved lead industries</option>{data?.industries.map(industry => <option key={industry.id} value={industry.id}>{industry.name}</option>)}</select></label>
+        <section className="rounded-xl border-[1px] border-black/30 bg-slate-50 p-4 sm:col-span-2">
+          <div className="flex items-center gap-2"><PenLine className="size-5" /><h3 className="font-bold">Let AI write your email</h3></div>
+          <p className="mt-2 text-sm leading-6 text-slate-600">Generate a persuasive subject and message from what your business offers, tailored to the industry selected above.</p>
+          <label className="mt-3 block text-sm font-semibold">What does your business offer?<textarea maxLength={2000} value={businessDescription} onChange={event => { setBusinessDescription(event.target.value); setDraft(null) }} placeholder="For example: We supply air compressors for industrial equipment, or help brands promote their products through advertising." className={`${field} min-h-24`} /></label>
+          <p className="mt-2 text-xs leading-5 text-slate-600">We use your saved AI Prospecting description when available. You can refine it here for this draft. If you only have a website URL, analyze it in AI Prospecting first.</p>
+          <button type="button" disabled={!data || !businessDescription.trim() || generating} onClick={generateEmail} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"><PenLine className="size-4" />{generating ? 'Writing your email...' : draft ? 'Generate another draft' : 'Generate subject and email'}</button>
+          {draft && <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">AI draft preview</p>
+            <h4 className="mt-2 font-semibold">{draft.subject}</h4>
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{draft.message}</p>
+            <p className="mt-3 text-xs leading-5 text-slate-600">Check the facts and wording before sending. Using this draft replaces the subject and message below.</p>
+            <div className="mt-3 flex flex-wrap gap-3"><button type="button" onClick={() => { setProfile({ ...profile, subject: draft.subject, message: draft.message }); setApproved(false); setDraft(null); setMessage('AI draft applied. Edit it below, then save or approve it when ready.') }} className="rounded-lg bg-[#0b1f3a] px-4 py-2 text-sm font-semibold text-white">Use this draft</button><button type="button" onClick={() => setDraft(null)} className="rounded-lg border border-black/30 px-4 py-2 text-sm font-semibold">Discard draft</button></div>
+          </div>}
+        </section>
         <label className="text-sm font-semibold sm:col-span-2">Email subject<input required maxLength={200} value={profile.subject} onChange={event => { setProfile({ ...profile, subject: event.target.value }); setApproved(false) }} placeholder="What would you like to discuss with your potential clients?" className={field} /></label>
         <label className="text-sm font-semibold sm:col-span-2">Your email message<textarea required maxLength={10000} value={profile.message} onChange={event => { setProfile({ ...profile, message: event.target.value }); setApproved(false) }} placeholder="Describe how your business can help this audience and what you would like them to do next." className={`${field} min-h-48`} /><span className="mt-2 block text-xs font-normal leading-5 text-slate-600">Use {'{{company_name}}'} for the recipient business. Dara adds your organization name, address, and unsubscribe option.</span></label>
         <label className="text-sm font-semibold sm:col-span-2">Your company address<input required maxLength={500} value={profile.companyAddress} onChange={event => { setProfile({ ...profile, companyAddress: event.target.value }); setApproved(false) }} className={field} /></label>
       </fieldset>
-      {data?.profile?.enabled ? <button type="button" disabled={busy} onClick={() => updateOutreach('pause')} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Pause my outreach to edit</button> : <><button disabled={busy || !data} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Save my message</button><label className="flex items-start gap-3 text-sm leading-6"><input type="checkbox" checked={approved} onChange={event => setApproved(event.target.checked)} className="mt-1 size-4 accent-[#0b1f3a]" /><span>I approve this message and audience for my organization. Matching saved leads may receive this email automatically.</span></label><button type="button" disabled={busy || !approved || !profile.senderId || !profile.subject.trim() || !profile.message.trim() || !profile.companyAddress.trim()} onClick={() => updateOutreach('activate')} className="rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Updating outreach...' : 'Start my automated outreach'}</button></>}
+      {data?.profile?.enabled ? <button type="button" disabled={busy} onClick={() => updateOutreach('pause')} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Pause my outreach to edit</button> : <><button disabled={busy || generating || !data} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Save my message</button><label className="flex items-start gap-3 text-sm leading-6"><input type="checkbox" disabled={generating || busy} checked={approved} onChange={event => setApproved(event.target.checked)} className="mt-1 size-4 accent-[#0b1f3a]" /><span>I approve this message and audience for my organization. Matching saved leads may receive this email automatically.</span></label><button type="button" disabled={busy || generating || !approved || !profile.senderId || !profile.subject.trim() || !profile.message.trim() || !profile.companyAddress.trim()} onClick={() => updateOutreach('activate')} className="rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Updating outreach...' : 'Start my automated outreach'}</button></>}
     </form>
     <section className="rounded-2xl border-[1px] border-black/30 bg-white p-6">
       <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#0b1f3a] text-white"><Mail className="size-5" /></span><div><h2 className="text-lg font-bold">Automatic email outreach</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{!data ? 'Loading your outreach status...' : active ? 'Matching saved leads receive your approved email, up to 30 per day and one per minute. Follow-up sequences are not enabled.' : data.automation.configured ? 'Automation is paused for this workspace. Your leads remain saved.' : 'Save your message, choose your connected business mailbox, and start outreach when you are ready.'}</p></div></div><span className={`rounded-full px-3 py-1.5 text-xs font-bold ${active ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}`}>{!data ? 'Loading' : active ? 'Active' : data.automation.configured ? 'Paused' : 'Awaiting activation'}</span></div>

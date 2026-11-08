@@ -32,3 +32,11 @@ There are no provider API keys or third-party campaign settings in the customer 
 - SENT means the SMTP server accepted the email; it does not establish inbox delivery or a reply. UNKNOWN means a send or process interruption could have occurred after acceptance. These are never automatically retried. Check the mailbox before any manual follow-up. Only failures before dispatch can be retried in Dara.
 - Bounce webhooks, delivery/open tracking, automatic replies, and multi-step sequences are not implemented. Provider bounce handling and deliverability configuration remain necessary for production.
 - No real email was sent during implementation. Configure a permitted mailbox and scheduler before activation.
+
+## AI email drafts
+
+In Your message and audience, choose an industry and use Generate subject and email. The business description is prefilled from the signed-in admin's saved AI Prospecting preferences, scoped to the current organization. It can be refined for the current draft. Website-only inputs must first be analyzed in AI Prospecting so a business summary is available.
+
+The backend generates a concise, benefit-focused email using the existing server-only OPENAI_API_KEY and OPENAI_PROSPECTING_MODEL configuration. It sends only the organization name, offering description and selected industry to the AI provider, not mailbox credentials or lead contact details. Generated output uses a strict subject/message schema and is validated before returning. Generation requests are serialized per organization.
+
+Review the preview and choose Use this draft to replace the editable subject and message fields. Regenerate or discard without changing an existing message. Applying a draft clears approval; saving and starting outreach remain separate actions. AI drafts are not sent automatically and should be checked for factual accuracy. Description refinements in this card guide the current generation; update AI Prospecting to change the saved business description.

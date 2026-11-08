@@ -5,6 +5,7 @@ import { getEmailServerConfig, processEmailQueue, SmtpError } from '@/lib/email-
 
 import { activateOrganizationCampaign, pauseOrganizationCampaign } from '@/lib/email-campaigns'
 import { smtpReady } from '@/lib/smtp-mailbox'
+import { cleanProspectingDraft } from '@/lib/prospecting-draft'
 
 export const maxDuration = 120
 
@@ -14,7 +15,7 @@ export async function GET() {
   try {
     const id = admin.organization.id
     const config = await getEmailServerConfig(id)
-    const [jobs, counts, profile, senders, industries] = await Promise.all([
+    const [jobs, counts, profile, senders, industries, preferences] = await Promise.all([
       pool.query(`SELECT j."id", j."email", j."status", j."lastError", l."businessName"
         FROM "EmailSyncJob" j JOIN "SalesLead" l ON l."id" = j."leadId"
         WHERE j."organizationId" = $1 ORDER BY j."updatedAt" DESC LIMIT 50`, [id]),
@@ -22,9 +23,12 @@ export async function GET() {
       pool.query('SELECT "subject", "message", "companyAddress", "industryId", "senderId", "enabled", "status" FROM "EmailAutomation" WHERE "organizationId" = $1', [id]),
       pool.query('SELECT "id", "email" FROM "OrganizationEmailSender" WHERE "organizationId" = $1 AND "smtpPassword" IS NOT NULL ORDER BY "email"', [id]),
       pool.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 ORDER BY "name"', [id]),
+      pool.query('SELECT "form" FROM "ProspectingPreference" WHERE "organizationId" = $1 AND "authUserId" = $2', [id, admin.user.id]),
     ])
     // Never return credentials, environment values or campaign routing to clients.
-    return NextResponse.json({ mailboxConnectionAvailable: smtpReady(), automation: { configured: Boolean(config), enabled: Boolean(config?.enabled) }, profile: profile.rows[0] || null, senders: senders.rows, industries: industries.rows, jobs: jobs.rows, counts: counts.rows })
+    const saved = cleanProspectingDraft(preferences.rows[0]?.form)
+    const businessDescription = saved.offering || (/^(https?:\/\/|www\.)|^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(saved.businessInput.trim()) ? '' : saved.businessInput)
+    return NextResponse.json({ businessDescription, mailboxConnectionAvailable: smtpReady(), automation: { configured: Boolean(config), enabled: Boolean(config?.enabled) }, profile: profile.rows[0] || null, senders: senders.rows, industries: industries.rows, jobs: jobs.rows, counts: counts.rows })
   } catch {
     return NextResponse.json({ error: 'Outreach activity is temporarily unavailable. Please try again shortly.' }, { status: 503 })
   }
