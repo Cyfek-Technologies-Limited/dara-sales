@@ -10,7 +10,7 @@ import { type ProspectingDraft } from '@/lib/prospecting-draft'
 type Suggestion = { name: string; reason: string; subcategories: string[] }
 type Category = { id: string; name: string; industryName: string; industryId: string }
 type Teammate = { id: string; name: string | null; email: string }
-type Business = { contactName?: string; contactJobTitle?: string; contactDepartment?: string; personSourceUrl?: string; businessName: string; summary: string; buyerReason?: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
+type Business = { emailSourceUrl?: string; phoneSourceUrl?: string; contactLookupStatus?: string; contactLookupMessage?: string; contactPagesChecked?: string[]; contactName?: string; contactJobTitle?: string; contactDepartment?: string; personSourceUrl?: string; businessName: string; summary: string; buyerReason?: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
 
 const fieldClassName = 'mt-1.5 w-full rounded-xl border-[1px] border-black/30 bg-white px-3.5 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-[#173b65] focus:ring-4 focus:ring-[#dbe5f0] disabled:cursor-wait'
 const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-900', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-900', 'bg-emerald-100 text-emerald-900', 'bg-[#dbe5f0] text-[#0b1f3a]']
@@ -87,12 +87,13 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
     if (loading) return
     setLoading('search'); setError(''); setMessage(''); setBusinesses([]); setLeadStatuses({})
     try {
-      const response = await fetch('/api/admin/prospecting/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ offering, location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit: Number(resultLimit) }) })
+      const response = await fetch('/api/admin/prospecting/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ offering, location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit: Number(resultLimit) }), signal: AbortSignal.timeout(115000) })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Could not search for businesses.')
       setBusinesses(data.businesses || [])
       setResultContext({ categoryId, location })
-      if (!data.businesses?.length) setMessage('No sourced potential buyers matched this search. Sellers and suppliers of your offering are excluded. Try a broader location or another customer category.')
+      if (!data.businesses?.length) setMessage(data.contactCandidatesChecked ? 'Businesses were researched, but their available contacts did not meet your selected requirements. Try fewer contact requirements or another category.' : 'No sourced potential buyers matched this search. Sellers and suppliers of your offering are excluded. Try a broader location or another customer category.')
+      else setMessage(`${data.businesses.length} businesses found. Published contacts were checked on their websites and contact pages.`)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not search for businesses.') }
     finally { setLoading('') }
   }
@@ -185,7 +186,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
           </label>
           <div className="sm:col-span-2">
             <button disabled={loading === 'search' || !offering.trim() || !location.trim() || !categoryId} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0b1f3a]/20 transition hover:bg-[#142e50] focus-visible:ring-4 focus-visible:ring-[#c9d8e8] disabled:cursor-not-allowed disabled:opacity-50">
-              {loading === 'search' ? <LoaderCircle className="size-4 animate-spin" /> : <Search className="size-4" />}{loading === 'search' ? 'Searching the web...' : 'Find businesses'}
+              {loading === 'search' ? <LoaderCircle className="size-4 animate-spin" /> : <Search className="size-4" />}{loading === 'search' ? 'Finding businesses and checking contact pages...' : 'Find businesses'}
             </button>
             <p className="mt-2 text-[11px] leading-5 text-[#475569]">These fields guide web research. More restrictive searches may return fewer results. Review each source before saving a lead.</p>
           </div>
@@ -216,9 +217,10 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
             <td className="min-w-64 px-4 py-4"><h4 className="font-semibold">{business.businessName}</h4><p className="mt-1 text-xs leading-5 text-slate-600">{business.summary}</p>{business.buyerReason && <p className="mt-2 text-xs leading-5 text-[#173b65]"><strong>Customer fit: </strong>{business.buyerReason}</p>}</td>
             <td className="min-w-32 px-4 py-4">{business.contactJobTitle || 'Not listed'}</td>
             <td className="px-4 py-4">{business.contactDepartment || 'Not listed'}</td>
-            <td className="px-4 py-4">{business.publicEmail ? <a href={'mailto:' + business.publicEmail} className="text-[#173b65] hover:underline">{business.publicEmail}</a> : 'Not listed'}</td>
-            <td className="whitespace-nowrap px-4 py-4">{business.publicPhone ? <a href={'tel:' + business.publicPhone} className="text-[#173b65] hover:underline">{business.publicPhone}</a> : 'Not listed'}</td>
-            <td className="min-w-48 space-y-2 px-4 py-4"><div className="flex flex-wrap gap-3 text-xs"><a href={business.website} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Website</a><a href={business.sourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Business source</a>{business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Contact source</a>}{business.personSourceUrl && <a href={business.personSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Person source</a>}</div>
+            <td className="px-4 py-4">{business.publicEmail ? <a href={'mailto:' + business.publicEmail} className="text-[#173b65] hover:underline">{business.publicEmail}</a> : <span title={business.contactLookupMessage}>{business.contactLookupStatus === 'UNAVAILABLE' ? 'Lookup unavailable' : 'Not found on checked pages'}</span>}</td>
+            <td className="whitespace-nowrap px-4 py-4">{business.publicPhone ? <a href={'tel:' + business.publicPhone} className="text-[#173b65] hover:underline">{business.publicPhone}</a> : <span title={business.contactLookupMessage}>{business.contactLookupStatus === 'UNAVAILABLE' ? 'Lookup unavailable' : 'Not found on checked pages'}</span>}</td>
+            <td className="min-w-48 space-y-2 px-4 py-4"><div className="flex flex-wrap gap-3 text-xs"><a href={business.website} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Website</a><a href={business.sourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Business source</a>{business.emailSourceUrl && <a href={business.emailSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Email source</a>}{business.phoneSourceUrl && <a href={business.phoneSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Phone source</a>}{!business.emailSourceUrl && !business.phoneSourceUrl && business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Contact source</a>}{business.personSourceUrl && <a href={business.personSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Person source</a>}</div>
+              {!business.publicEmail && !business.publicPhone && business.contactLookupMessage && <p className="text-xs leading-5 text-amber-800">{business.contactLookupMessage}</p>}
               <button type="button" disabled={Boolean(savingLeadKey) || isSaved} onClick={() => saveBusiness(business)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">{isSaving ? <LoaderCircle className="size-4 animate-spin" /> : isSaved ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}{isSaving ? 'Saving...' : isSaved ? 'Saved to leads' : 'Add to leads'}</button>
               {status && <p role={status.kind === 'error' ? 'alert' : 'status'} className={`text-xs leading-5 ${status.kind === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>{status.message}</p>}
             </td>

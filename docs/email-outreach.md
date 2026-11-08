@@ -50,3 +50,9 @@ The visible monitor requests processing of the already-approved queue every 15 s
 Company contacts lists saved LEAD-stage records in the selected industry, with contact person, company, job title, department, email and phone. Unsubscribed and missing-email contacts are labeled. New AI Prospecting searches request named work contacts explicitly published on official company pages, alongside source links. Roles and departments persist with the saved lead. Direct contacts are not guaranteed: general business email/phone may be used, and missing fields remain not listed. Existing saved leads are not automatically researched or enriched by this migration.
 
 No real email was sent to exercise the live monitor during implementation.
+
+## Website contact extraction
+
+Prospecting discovery now follows each sourced business website and up to three official contact links or common contact-page paths. It reads HTML, mailto/tel links, visible text, Organization/LocalBusiness JSON-LD contacts, common HTML entities and email obfuscation. Contact extraction has a per-site deadline, bounded concurrency and a bounded response size. It uses pinned public IPv4 DNS addresses and validates same-business-site redirects before connecting. Pages requiring client-side rendering, inaccessible sites, bot challenges, unsupported encodings or timeouts can still prevent extraction; those cases are not labeled as proof that contacts do not exist.
+
+Email and phone have separate source URLs so data found on different official pages is retained when saving a lead. Contact requirements are checked after extraction. Source-backed search contacts can be retained when direct page access fails. Existing saved leads are not automatically updated; run discovery again for freshly extracted results. These changes require deployment, but no database migration.

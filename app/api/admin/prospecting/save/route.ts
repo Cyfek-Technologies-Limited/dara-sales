@@ -3,6 +3,7 @@ import { after, NextResponse } from 'next/server'
 import { prepareEmailAutomation, processEmailQueue } from '@/lib/email-outreach'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
+import { sameBusinessWebsite } from '@/lib/website-contacts'
 
 export const maxDuration = 60
 
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
   const rawPhone = typeof body.publicPhone === 'string' ? body.publicPhone.trim().slice(0, 40) : ''
   const phone = /^[+\d(][\d\s().+-]{6,38}$/.test(rawPhone) && rawPhone.replace(/\D/g, '').length >= 7 ? rawPhone : null
   const contactSourceUrl = validWebUrl(body.contactSourceUrl)
+  const emailSourceUrl = validWebUrl(body.emailSourceUrl) || contactSourceUrl
+  const phoneSourceUrl = validWebUrl(body.phoneSourceUrl) || contactSourceUrl
   const personSourceUrl = validWebUrl(body.personSourceUrl)
   const personSourceValid = personSourceUrl && website && new URL(personSourceUrl).hostname.toLowerCase().replace(/^www\./, '') === new URL(website).hostname.toLowerCase().replace(/^www\./, '')
   const contactName = personSourceValid && typeof body.contactName === 'string' ? body.contactName.trim().slice(0, 160) : null
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
   )).rows[0] : null
   const ownerId = owner?.authUserId || null
   if (!category) return NextResponse.json({ error: 'Choose a valid industry category.' }, { status: 400 })
-  if ((email || phone) && (!contactSourceUrl || !website || new URL(contactSourceUrl).hostname.toLowerCase().replace(/^www\./, '') !== new URL(website).hostname.toLowerCase().replace(/^www\./, ''))) {
+  if (email && (!emailSourceUrl || !sameBusinessWebsite(emailSourceUrl, website!)) || phone && (!phoneSourceUrl || !sameBusinessWebsite(phoneSourceUrl, website!))) {
     return NextResponse.json({ error: 'Contact details need a source page on the business website.' }, { status: 400 })
   }
 
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
     await pool.query(
       `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "contactName", "contactJobTitle", "contactDepartment", "updatedAt")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())`,
-      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${contactSourceUrl ? ` | Contact source: ${contactSourceUrl}` : ''}${personSourceValid && contactName ? ` | Person source: ${personSourceUrl}` : ''}`, summary, contactName, contactJobTitle, contactDepartment],
+      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${email && emailSourceUrl ? ` | Email source: ${emailSourceUrl}` : ''}${phone && phoneSourceUrl ? ` | Phone source: ${phoneSourceUrl}` : ''}${personSourceValid && contactName ? ` | Person source: ${personSourceUrl}` : ''}`, summary, contactName, contactJobTitle, contactDepartment],
     )
     after(() => processEmailQueue(admin.organizationId).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, id: leadId, ownerId }, { status: 201 })
