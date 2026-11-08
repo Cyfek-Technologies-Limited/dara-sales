@@ -2,8 +2,8 @@ import { pool } from '@/lib/db'
 import { smtpReady, smtpTransport } from '@/lib/smtp-mailbox'
 
 export class SmtpError extends Error {}
-export async function getEmailServerConfig(organizationId: string) {
-  const row = (await pool.query(`SELECT a.*, s."email", s."senderName", s."smtpHost", s."smtpPort", s."smtpUsername", s."smtpPassword", o."name" AS "organizationName"
+export async function getEmailServerConfig(organizationId: string, database: Pick<typeof pool, 'query'> = pool) {
+  const row = (await database.query(`SELECT a.*, s."email", s."senderName", s."smtpHost", s."smtpPort", s."smtpUsername", s."smtpPassword", o."name" AS "organizationName"
     FROM "EmailAutomation" a JOIN "OrganizationEmailSender" s ON s."id" = a."senderId" AND s."organizationId" = a."organizationId"
     JOIN "Organization" o ON o."id" = a."organizationId"
     WHERE a."organizationId" = $1 AND a."campaignId" LIKE 'smtp:%' AND a."status" = 'READY' AND s."smtpPassword" IS NOT NULL`, [organizationId])).rows[0]
@@ -41,22 +41,26 @@ export async function processEmailQueue(organizationId?: string) {
   let processed = 0
   for (const organization of organizations) {
     const client = await pool.connect()
-    const lockName = `smtp-send:${organization.organizationId}`
-    let locked = false
+    let transactionOpen = false
     try {
-      locked = (await client.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked', [lockName])).rows[0].locked
+      await client.query('BEGIN'); transactionOpen = true
+      // Claim under a short row transaction, not a session advisory lock that
+      // can survive a terminated serverless invocation on a pooled connection.
+      const locked = (await client.query('SELECT "organizationId" FROM "EmailAutomation" WHERE "organizationId" = $1 FOR UPDATE SKIP LOCKED', [organization.organizationId])).rows.length > 0
       if (!locked) continue
-      const config = await getEmailServerConfig(organization.organizationId)
+      const config = await getEmailServerConfig(organization.organizationId, client)
       if (!config?.enabled) continue
       const recent = (await client.query(`SELECT COUNT(*) FILTER (WHERE "sentAt" > NOW() - INTERVAL '24 hours')::int AS total,
         COUNT(*) FILTER (WHERE "updatedAt" > NOW() - INTERVAL '1 minute' AND "attempts" > 0)::int AS recent
         FROM "EmailSyncJob" WHERE "organizationId" = $1`, [organization.organizationId])).rows[0]
-      if (recent.total >= 30 || recent.recent > 0) continue
-      const job = (await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SENDING', "attempts" = "attempts" + 1,
+      const inFlight = (await client.query(`SELECT 1 FROM "EmailSyncJob" WHERE "organizationId" = $1 AND "status" = 'SENDING' AND "lockedUntil" > NOW() LIMIT 1`, [organization.organizationId])).rows.length
+      if (recent.total >= 30 || recent.recent > 0 || inFlight) continue
+      const job = (await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SENDING', "attempts" = "attempts" + 1, "lastError" = NULL,
         "lockedUntil" = NOW() + INTERVAL '2 minutes', "updatedAt" = NOW()
         WHERE "id" = (SELECT "id" FROM "EmailSyncJob" WHERE "organizationId" = $1 AND "campaignId" = $2
         AND "status" = 'QUEUED' AND "availableAt" <= NOW() ORDER BY "createdAt" LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *`, [organization.organizationId, config.campaignId])).rows[0]
       if (!job) continue
+      await client.query('COMMIT'); transactionOpen = false
       let sending = false
       try {
         const lead = (await client.query(`SELECT l.*, c."industryId" AS "leadIndustryId" FROM "SalesLead" l
@@ -70,7 +74,7 @@ export async function processEmailQueue(organizationId?: string) {
         unsubscribe.searchParams.set('token', job.unsubscribeToken)
         const text = config.message.replaceAll('{{company_name}}', lead.businessName) + `\n\n${config.organizationName}\n${config.companyAddress}\n\nUnsubscribe: ${unsubscribe}`
         // Pause/suppression changes made while resolving SMTP take effect before dispatch.
-        const current = await getEmailServerConfig(job.organizationId)
+        const current = await getEmailServerConfig(job.organizationId, client)
         const optedOut = (await client.query('SELECT 1 FROM "EmailSuppression" WHERE "organizationId" = $1 AND "email" = $2', [job.organizationId, job.email])).rows.length
         if (!current?.enabled || current.campaignId !== job.campaignId || optedOut) {
           await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SKIPPED', "lockedUntil" = NULL WHERE "id" = $1`, [job.id]); continue
@@ -88,15 +92,16 @@ export async function processEmailQueue(organizationId?: string) {
         const rejected = typeof smtpError.responseCode === 'number' && smtpError.responseCode >= 400
         const beforeData = ['CONN','EHLO','HELO','STARTTLS','AUTH','AUTH PLAIN','AUTH LOGIN','MAIL FROM','RCPT TO'].includes(smtpError.command || '') || smtpError.code === 'EAUTH'
         const uncertain = sending && !rejected && !beforeData
-        const reason = smtpError.code === 'EAUTH' ? 'Mailbox sign-in was rejected. Check the SMTP/app password and provider permissions.'
+        const reason = smtpError.code === 'SMTP_CREDENTIALS_UNREADABLE' ? 'Saved mailbox credentials could not be decrypted. Pause outreach and reconnect the mailbox on this deployment.'
+          : smtpError.code === 'EAUTH' ? 'Mailbox sign-in was rejected. Check the SMTP/app password and provider permissions.'
           : rejected ? `The mail server rejected this email (SMTP ${smtpError.responseCode}). Check your mailbox limits and recipient address.`
           : uncertain ? 'Delivery could not be confirmed. Check your mailbox before sending again.' : 'Could not connect to the mailbox. Check its SMTP settings.'
         await client.query(`UPDATE "EmailSyncJob" SET "status" = $2, "lastError" = $3, "lockedUntil" = NULL, "updatedAt" = NOW() WHERE "id" = $1`,
           [job.id, uncertain ? 'UNKNOWN' : 'FAILED', reason])
       }
     } finally {
-      if (locked) await client.query('SELECT pg_advisory_unlock(hashtext($1))', [lockName])
-      client.release()
+      try { if (transactionOpen) await client.query('ROLLBACK') }
+      finally { client.release() }
     }
   }
   return processed

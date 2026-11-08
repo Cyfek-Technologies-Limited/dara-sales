@@ -22,6 +22,7 @@ export default function OutreachLiveMonitor({ starting, refreshKey }: { starting
   const [refresh, setRefresh] = useState(0)
   const [loading, setLoading] = useState(true)
   const lastKick = useRef(0)
+  const workerInFlight = useRef(false)
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
@@ -40,11 +41,20 @@ export default function OutreachLiveMonitor({ starting, refreshKey }: { starting
         if (cancelled) return
         setActivity(result); setReceivedAt(Date.now()); setError('')
         // Keep the approved queue moving while this page is open. GET requests never send email.
-        if (result.enabled && result.counts.some(item => ['QUEUED','SENDING'].includes(item.status) && item.count > 0) && Date.now() - lastKick.current >= 15000) {
+        if (result.enabled && !workerInFlight.current && result.counts.some(item => ['QUEUED','SENDING'].includes(item.status) && item.count > 0) && Date.now() - lastKick.current >= 15000) {
           lastKick.current = Date.now()
-          const kick = await fetch('/api/admin/email-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'process' }), signal: controller.signal })
-          if (!kick.ok && kick.status !== 409) setWorkerError('Queue processing could not start. Retrying shortly.')
-          else setWorkerError('')
+          workerInFlight.current = true
+          // Keep polling while SMTP runs; awaiting this request here hides the
+          // SENDING transition until the message has already finished.
+          void fetch('/api/admin/email-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'process' }), signal: AbortSignal.timeout(90000) })
+            .then(async kick => {
+              const outcome = await kick.json().catch(() => ({}))
+              if (cancelled) return
+              if (!kick.ok) setWorkerError(outcome.error || 'The queue worker could not process emails. Retrying shortly.')
+              else { setWorkerError(''); setRefresh(value => value + 1) }
+            })
+            .catch(() => { if (!cancelled) setWorkerError('The worker request timed out or lost its connection. Activity will keep updating; queued emails will be checked again.') })
+            .finally(() => { workerInFlight.current = false })
         }
       } catch (cause) { if (!cancelled) setError(cause instanceof Error ? cause.message : 'Live updates interrupted.') }
       finally { if (!cancelled) { setLoading(false); timer = setTimeout(poll, 3000) } }

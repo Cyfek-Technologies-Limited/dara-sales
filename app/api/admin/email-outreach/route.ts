@@ -72,9 +72,10 @@ export async function POST(request: Request) {
   try {
     if (body.action === 'process') {
       const config = await getEmailServerConfig(id)
-      if (!config?.enabled) return NextResponse.json({ error: 'Outreach is paused.' }, { status: 409 })
-      after(() => processEmailQueue(id).then(() => {}).catch(() => console.error('[email] Background processing failed')))
-      return NextResponse.json({ ok: true }, { status: 202 })
+      if (!config) return NextResponse.json({ error: 'The sending configuration is incomplete. Pause outreach, reconnect the selected SMTP mailbox, and activate again.' }, { status: 409 })
+      if (!config.enabled) return NextResponse.json({ error: 'Sending is paused or disabled in the platform configuration.' }, { status: 409 })
+      const processed = await processEmailQueue(id)
+      return NextResponse.json({ ok: true, processed }, { headers: { 'Cache-Control': 'no-store' } })
     }
     if (body.action === 'save' || body.action === 'activate') {
       if (body.action === 'activate' && body.confirmed !== true) throw new SmtpError('Review and approve your organization\'s message before activating outreach.')
@@ -98,6 +99,12 @@ export async function POST(request: Request) {
     after(() => processEmailQueue(id).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, message: 'Failed contacts will be retried automatically.' })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof SmtpError ? error.message : 'Could not update your outreach. Check that the latest database migration has been applied.' }, { status: 502 })
+    const code = (error as { code?: string })?.code
+    console.error('[email] Outreach request failed', { action: body.action, code: typeof code === 'string' ? code : 'UNEXPECTED_ERROR' })
+    if (body.action === 'process') {
+      await pool.query(`UPDATE "EmailSyncJob" SET "lastError" = 'The queue worker failed before sending. Check the deployment logs or retry processing.'
+        WHERE "organizationId" = $1 AND "status" = 'QUEUED'`, [id]).catch(() => {})
+    }
+    return NextResponse.json({ error: body.action === 'process' ? 'The email queue worker could not run. Please retry; if it persists, check the server logs for the outreach error code.' : error instanceof SmtpError ? error.message : 'Could not update your outreach. Check that the latest database migration has been applied.' }, { status: 502 })
   }
 }
