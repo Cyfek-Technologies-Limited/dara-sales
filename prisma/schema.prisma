@@ -35,6 +35,7 @@ model Organization {
   emailSyncJobs     EmailSyncJob[]
   prospectingPreferences ProspectingPreference[]
   emailSenders      OrganizationEmailSender[]
+  emailSuppressions EmailSuppression[]
   mailboxOAuthStates MailboxOAuthState[]
 
   @@index([status])
@@ -253,6 +254,11 @@ model OrganizationEmailSender {
   organizationId    String
   providerAccountId String       @unique
   googleSubject     String?      @unique
+  smtpHost          String?
+  smtpPort          Int?
+  smtpUsername      String?
+  smtpPassword      String?
+  senderName        String?
   email             String
   verifiedAt        DateTime
   createdAt         DateTime     @default(now())
@@ -295,6 +301,9 @@ model EmailSyncJob {
   email          String
   campaignId     String
   status         String       @default("QUEUED")
+  unsubscribeToken String     @unique @default(uuid())
+  sentAt         DateTime?
+  messageId      String?
   attempts       Int          @default(0)
   lastError      String?
   availableAt    DateTime     @default(now())
@@ -306,5 +315,14 @@ model EmailSyncJob {
 
   @@unique([organizationId, email])
   @@index([status, availableAt])
+  @@schema("public")
+}
+
+model EmailSuppression {
+  organizationId String
+  email String
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@id([organizationId, email])
   @@schema("public")
 }

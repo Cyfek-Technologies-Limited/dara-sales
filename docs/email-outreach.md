@@ -1,91 +1,34 @@
-# Email outreach for multiple organizations
+# Email outreach with Nodemailer
 
-Dara is a platform used by independent businesses. Each organization owns its audience, sender, email message, approval, and campaign. There is no universal message, shared campaign ID, or single-organization deployment restriction.
+Dara sends one approved initial email through each organization's own SMTP mailbox. Smartlead is no longer used. Each organization controls its own sender name, email, audience, message, and address. Unassigned leads are supported. SMTP sending does not automate replies or follow-up sequences.
 
-## Business owner flow in Dara
+## Platform setup
 
-1. Describe the business and find/save leads using AI Prospecting.
-2. In Email outreach, select a connected business mailbox and a target industry (or all saved lead industries).
-3. Write the subject and message, add the business address, and review the content. Each organization writes its own copy; it does not configure messages in Smartlead.
-4. Approve and start automated outreach. The backend creates a campaign for that organization, uploads its message, links only its authorized sender, applies the default weekday sending schedule, activates the campaign, and enrolls matching leads.
-5. Pause before changing the message or audience. Changed content or targeting creates a separate campaign, leaving the former campaign paused. Contacts already processed are not automatically re-enrolled.
+1. Install dependencies with `pnpm install` and apply migrations with `pnpm db:migrate:deploy`.
+2. Set server-only `SMTP_ENCRYPTION_KEY` to a random 32-byte hexadecimal value. Generate it with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Local setup generated a key without displaying it. Copy that same key securely into your deployment environment. Never expose it with NEXT_PUBLIC_. Keep it stable: changing it makes stored mailbox passwords unreadable until reconnected.
+3. Set `NEXT_PUBLIC_APP_URL` to the deployed HTTPS application origin. Localhost is supported for development, but recipients cannot use a localhost unsubscribe link.
+4. Set `CRON_SECRET` to a separate long random secret. Configure a scheduler to GET `/api/cron/email-outreach` every minute with `Authorization: Bearer <CRON_SECRET>`. Use a scheduler that supports custom headers. An external scheduler or suitable hosting plan is required; no hosted scheduler has been provisioned by this code change.
+5. Restart/redeploy. Set `EMAIL_AUTOMATION_ENABLED=false` for an emergency stop.
 
-A short onboarding is still necessary to know what each business wants to say and to authorize its sending mailbox. Once approved, saving leads triggers background processing automatically. No provider API key or campaign ID is entered in the business dashboard.
+Smartlead and Google mailbox OAuth variables are no longer read. Normal Google login configuration is separate. Previously active campaigns in Smartlead must be paused there; replacing Dara's integration cannot stop provider campaigns already running independently.
 
-## Private platform configuration
+## Each customer organization
 
-```env
-SMARTLEAD_API_KEY=platform_provider_key
-SMARTLEAD_AUTOMATION_ENABLED=true
-CRON_SECRET=private_scheduler_secret
-```
+1. Open Email outreach and enter its sender business name, email, SMTP hostname, port 465 or 587, and SMTP/app password.
+2. Click Connect business mailbox. The backend verifies SMTP authentication without sending an email. Some providers require app passwords, administrator approval, or do not allow password-based SMTP. Nodemailer does not bypass provider rules, mailbox quotas, or Google app restrictions.
+3. Choose the connected sender and audience. Write the subject and message; `{{company_name}}` substitutes the lead's business name. Enter the company's address.
+4. Review and approve, then start automation. Existing matching saved leads are included. Saving new matching leads also starts a queue-processing attempt.
+5. Pause before editing or reconnecting. Pausing prevents new dispatches; an email already handed to SMTP cannot be recalled.
 
-These are server-only deployment values. Never use NEXT_PUBLIC_ prefixes or commit values. SMARTLEAD_CAMPAIGN_ID and SMARTLEAD_ORGANIZATION_ID are obsolete and are no longer read. SMARTLEAD_AUTOMATION_ENABLED=false stops further imports platform-wide; it does not pause messages already scheduled at the provider.
+There are no provider API keys or third-party campaign settings in the customer interface. Customers still need an existing mailbox that permits their intended email use. Nodemailer is a free library, not an email hosting service.
 
-Apply migrations with `npm run db:migrate:deploy`. The organization outreach migration preserves former campaign IDs in legacyCampaignId and disables adoption of legacy shared campaign settings. Previously created provider campaigns are not automatically paused by a database migration; the operator must review and pause any legacy campaigns still sending.
+## Delivery and safeguards
 
-## Organization isolation
-
-- EmailAutomation is keyed by organizationId and stores that organization's message, audience, approval state, and provider campaign ID.
-- OrganizationEmailSender binds a verified provider mailbox to one organization. A provider mailbox cannot be assigned to multiple organizations.
-- Dashboard APIs derive the organization from the authenticated admin. Sender IDs and industry IDs supplied by a browser are checked against that organization.
-- Campaign creation and updates run under a per-organization lock. The campaign ID is generated by the provider and stored on the server, not supplied by the browser.
-- Import workers read the campaign and approved sender belonging to each job's organization. The global worker handles all organizations; no environment variable chooses a single workspace.
-- Draft, unapproved, paused, disconnected-sender, and mismatched-audience leads do not send.
-
-## Connect Google Workspace / Gmail
-
-Business owners use **Email outreach > Connect Google mailbox**, select their Google account, and approve the consent screen. Dara verifies the Google identity, connects the account to Smartlead server-to-server, and adds it to that organization's Send from list. No password or provider API key is entered by the business. Connection alone never activates outreach or enables warmup messages.
-
-### One-time platform administrator setup
-
-1. Create a Google Cloud project for Dara, enable Gmail API, and configure the Google OAuth consent screen for an External application (Dara serves multiple organizations).
-2. Create a Web application OAuth client. Add the authorized redirect URIs you will use:
-
-   ```text
-   http://localhost:3000/api/admin/email-outreach/google/callback
-   https://YOUR-DARA-DOMAIN/api/admin/email-outreach/google/callback
-   ```
-
-3. Set these private deployment values, using the exact redirect URI for that environment:
-
-   ```env
-   GOOGLE_MAILBOX_CLIENT_ID=your_google_oauth_client_id
-   GOOGLE_MAILBOX_CLIENT_SECRET=your_google_oauth_client_secret
-   GOOGLE_MAILBOX_REDIRECT_URI=http://localhost:3000/api/admin/email-outreach/google/callback
-   SMARTLEAD_GOOGLE_OAUTH_CONFIGURED=false
-   ```
-
-4. Configure the **same Google OAuth client ID and secret** in the platform's Smartlead custom Google OAuth settings. Smartlead needs those credentials to refresh the Google tokens it receives. This requires Smartlead's custom OAuth capability; ordinary Dara Google sign-in credentials alone do not complete this setup. Follow [Smartlead's private Google OAuth setup](https://helpcenter.smartlead.ai/en/articles/296-how-to-set-up-private-infrastructure-oauth-in-smartlead-for-google) for account prerequisites. If that setup also requires Smartlead's own callback URI, register it on the same Google client alongside Dara's callback.
-5. Configure the consent screen for `openid`, `email`, `profile`, and `https://mail.google.com/`. This integration requests the mailbox scope used by Smartlead's documented OAuth account API; it is broader than send-only access. Review the exact permissions displayed to users. Publishing a public application with this restricted scope requires Google's applicable verification/security assessment; development test-user access is not production approval. See [Google scope requirements](https://developers.google.com/workspace/gmail/api/auth/scopes).
-6. While the Google app is in testing, add permitted test users in the Google Auth Platform console. Workspace organizations may also require their administrator to approve third-party app access. Testing-mode refresh-token lifetimes are not suitable for unattended production operation.
-7. Apply migrations using `npm run db:migrate:deploy`, set `SMARTLEAD_GOOGLE_OAUTH_CONFIGURED=true` after the provider setup is complete, and restart/redeploy Dara. The connection button becomes available only when its server configuration is present.
-
-These settings are configured once for the platform, not once per customer. Each customer independently grants mailbox access with their own Google account.
-
-### Callback and workspace protection
-
-Authorization uses a random state, an HttpOnly same-site browser cookie, PKCE, a ten-minute expiry, and single-use server-side state. The callback requires the same authenticated admin and workspace. Google access and refresh tokens are not returned to the browser or stored in Dara's sender table. They are transmitted only to Smartlead's documented OAuth endpoint; Smartlead handles renewal.
-
-Google's verified account ID and verified email determine the mailbox identity. A mailbox already assigned to another organization is rejected before its provider credentials are changed. A sender binding is created only after Smartlead confirms both sending and inbox connectivity. Connection errors return safe status codes to the dashboard; logs omit tokens and authorization codes. Expired state rows are cleaned on subsequent connection starts.
-
-Mailbox disconnection and account revocation management within Dara are not implemented yet; use the connected Google account's authorized-app settings to revoke access when needed. End-to-end consent and token renewal must be checked with the platform's configured OAuth app before production use.
-
-References: [Smartlead OAuth account API](https://api.smartlead.ai/api-reference/email-accounts/add-oauth), [Google server OAuth flow](https://developers.google.com/identity/protocols/oauth2/web-server).
-
-## Background processing and reporting
-
-Invoke the protected worker every minute using an HTTPS scheduler:
-
-```text
-GET https://YOUR-DARA-DOMAIN/api/cron/email-outreach
-Authorization: Bearer YOUR_CRON_SECRET
-```
-
-The scheduler is not provisioned by this repository. Provider setup, mailbox connection, and a running scheduler are required for live operation. Each worker run imports up to three contacts, using persistent jobs and retry leases. It runs after saves too. Existing eligible leads are enrolled automatically after activation.
-
-Duplicate, block, and unsubscribe checks remain enabled. Dara reports import status; Added to outreach does not mean delivered. Live delivery/reply webhooks are not yet implemented.
-
-The current default schedule is Monday-Friday, 09:00-17:00 Africa/Lagos, with 30 new leads daily and eight minutes between emails. Custom per-organization schedules and multiple simultaneous audience campaigns within one organization are future extensions.
-
-References: [Smartlead campaign API guide](https://api.smartlead.ai/guides/campaign-setup), [unsubscribe placeholder](https://helpcenter.smartlead.ai/en/articles/27-how-does-unsubscribing-work-in-smartlead-manage-unsubscribed-leads-effectively).
+- Credentials are AES-256-GCM encrypted with organization-bound authenticated data and never returned in API responses. SMTP uses TLS with certificate validation. Only public IPv4 SMTP destinations on ports 465/587 are allowed; the resolved address is pinned to avoid DNS rebinding.
+- SMTP login verifies account access, not ownership of arbitrary aliases. The sender address is restricted to the authenticated email. The provider must authorize sending from it.
+- A worker processes at most one email per run, with per-organization serialization, at least one minute between attempts, and at most 30 accepted messages per rolling 24 hours. Increase worker capacity deliberately for production volume.
+- Organization/email uniqueness prevents repeat initial emails, even if the message changes. Historical Smartlead imports are retained as imports and are not resent. Never-imported cancelled queue entries can join the approved SMTP audience.
+- Every email includes the organization's name/address and an unsubscribe link. The link opens a confirmation page; POST supports one-click unsubscribe. Suppression is organization-specific and checked before dispatch.
+- SENT means the SMTP server accepted the email; it does not establish inbox delivery or a reply. UNKNOWN means a send or process interruption could have occurred after acceptance. These are never automatically retried. Check the mailbox before any manual follow-up. Only failures before dispatch can be retried in Dara.
+- Bounce webhooks, delivery/open tracking, automatic replies, and multi-step sequences are not implemented. Provider bounce handling and deliverability configuration remain necessary for production.
+- No real email was sent during implementation. Configure a permitted mailbox and scheduler before activation.

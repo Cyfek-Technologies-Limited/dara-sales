@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
-import { processEmailQueue } from '@/lib/smartlead'
+import { processEmailQueue } from '@/lib/email-outreach'
 
 export const maxDuration = 60
 

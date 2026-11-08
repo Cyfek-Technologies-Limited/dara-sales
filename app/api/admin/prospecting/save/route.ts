@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import { after, NextResponse } from 'next/server'
-import { prepareEmailAutomation, processEmailQueue } from '@/lib/smartlead'
+import { prepareEmailAutomation, processEmailQueue } from '@/lib/email-outreach'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
 
