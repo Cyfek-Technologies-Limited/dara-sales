@@ -10,7 +10,7 @@ import { type ProspectingDraft } from '@/lib/prospecting-draft'
 type Suggestion = { name: string; reason: string; subcategories: string[] }
 type Category = { id: string; name: string; industryName: string; industryId: string }
 type Teammate = { id: string; name: string | null; email: string }
-type Business = { businessName: string; summary: string; buyerReason?: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
+type Business = { contactName?: string; contactJobTitle?: string; contactDepartment?: string; personSourceUrl?: string; businessName: string; summary: string; buyerReason?: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
 
 const fieldClassName = 'mt-1.5 w-full rounded-xl border-[1px] border-black/30 bg-white px-3.5 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-[#173b65] focus:ring-4 focus:ring-[#dbe5f0] disabled:cursor-wait'
 const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-900', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-900', 'bg-emerald-100 text-emerald-900', 'bg-[#dbe5f0] text-[#0b1f3a]']
@@ -204,39 +204,27 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
           </select>
           <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{teammates.length ? 'Save leads as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Leads will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-[#173b65] underline">Manage team</Link></>}</p>
         </div>
+        <p className="text-xs leading-5 text-slate-500">Work contacts are shown only when publicly listed on an official company page. Company inboxes and main phone numbers may be used when direct work contacts are unavailable.</p>
+        <div className="overflow-x-auto rounded-xl border-[1px] border-black/30 bg-white"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr>{['Full name','Company','Job title','Department','Email','Phone','Sources / save'].map(title => <th key={title} className="whitespace-nowrap px-4 py-3">{title}</th>)}</tr></thead><tbody>
         {businesses.map((business) => {
           const key = business.businessName + ':' + business.website
           const status = leadStatuses[key]
           const isSaving = savingLeadKey === key
           const isSaved = status?.kind === 'success'
-          return <article key={key} className="rounded-xl border-[1px] border-black/30 bg-white p-4 shadow-sm transition hover:shadow-md">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-              <div className="min-w-0">
-                <h4 className="font-semibold">{business.businessName}</h4>
-                <p className="mt-1 text-xs leading-5 text-[#475569]">{business.summary}</p>
-                {business.buyerReason && <p className="mt-2 rounded-lg bg-[#edf2f7] p-3 text-xs leading-5 text-[#0b1f3a]"><strong>Why they may need your offering: </strong>{business.buyerReason}</p>}
-                {(business.publicEmail || business.publicPhone) && <div className="mt-2 space-y-1 text-xs text-[#475467]">
-                  {business.publicEmail && <p>Email: <a className="font-medium text-[#173b65] hover:underline" href={'mailto:' + business.publicEmail}>{business.publicEmail}</a></p>}
-                  {business.publicPhone && <p>Phone: <a className="font-medium text-[#173b65] hover:underline" href={'tel:' + business.publicPhone}>{business.publicPhone}</a></p>}
-                </div>}
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium">
-                  <a href={business.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#173b65] hover:underline">Official website <ExternalLink className="size-3" /></a>
-                  <a href={business.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#173b65] hover:underline">Research source <ExternalLink className="size-3" /></a>
-                  {business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#173b65] hover:underline">Contact source <ExternalLink className="size-3" /></a>}
-                </div>
-              </div>
-              <div className="shrink-0 sm:max-w-60">
-                <button type="button" onClick={() => saveBusiness(business)} disabled={Boolean(savingLeadKey) || isSaved} aria-label={(isSaved ? 'Added ' : 'Add ') + business.businessName + ' to leads'} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:ring-4 focus-visible:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60">
-                  {isSaving ? <LoaderCircle className="size-4 animate-spin" /> : isSaved ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}
-                  {isSaving ? 'Saving...' : isSaved ? 'Added to leads' : 'Add to leads'}
-                </button>
-                {status && <p role={isSaved ? 'status' : 'alert'} className={'mt-2 rounded-lg p-2.5 text-xs leading-5 ' + (isSaved ? 'bg-emerald-100 text-emerald-950' : 'bg-rose-100 text-rose-900')}>
-                  {status.message}{isSaved && <> <Link href="/admin/leads" className="font-semibold underline">View leads</Link></>}
-                </p>}
-              </div>
-            </div>
-          </article>
+          return <tr key={key} className="border-t border-black/10 align-top hover:bg-slate-50">
+            <td className="min-w-36 px-4 py-4 font-semibold">{business.contactName || <span className="font-normal text-slate-400">Not publicly listed</span>}</td>
+            <td className="min-w-64 px-4 py-4"><h4 className="font-semibold">{business.businessName}</h4><p className="mt-1 text-xs leading-5 text-slate-600">{business.summary}</p>{business.buyerReason && <p className="mt-2 text-xs leading-5 text-[#173b65]"><strong>Customer fit: </strong>{business.buyerReason}</p>}</td>
+            <td className="min-w-32 px-4 py-4">{business.contactJobTitle || 'Not listed'}</td>
+            <td className="px-4 py-4">{business.contactDepartment || 'Not listed'}</td>
+            <td className="px-4 py-4">{business.publicEmail ? <a href={'mailto:' + business.publicEmail} className="text-[#173b65] hover:underline">{business.publicEmail}</a> : 'Not listed'}</td>
+            <td className="whitespace-nowrap px-4 py-4">{business.publicPhone ? <a href={'tel:' + business.publicPhone} className="text-[#173b65] hover:underline">{business.publicPhone}</a> : 'Not listed'}</td>
+            <td className="min-w-48 space-y-2 px-4 py-4"><div className="flex flex-wrap gap-3 text-xs"><a href={business.website} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Website</a><a href={business.sourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Business source</a>{business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Contact source</a>}{business.personSourceUrl && <a href={business.personSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Person source</a>}</div>
+              <button type="button" disabled={Boolean(savingLeadKey) || isSaved} onClick={() => saveBusiness(business)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">{isSaving ? <LoaderCircle className="size-4 animate-spin" /> : isSaved ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}{isSaving ? 'Saving...' : isSaved ? 'Saved to leads' : 'Add to leads'}</button>
+              {status && <p role={status.kind === 'error' ? 'alert' : 'status'} className={`text-xs leading-5 ${status.kind === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>{status.message}</p>}
+            </td>
+          </tr>
         })}
+        </tbody></table></div>
       </div>}
     </section>
     <p className="text-[11px] leading-5 text-[#64748b]">Search findings can be incomplete or outdated. Confirm the business and contact details from the linked source before outreach.</p>

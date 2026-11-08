@@ -38,6 +38,11 @@ export async function POST(request: Request) {
   const rawPhone = typeof body.publicPhone === 'string' ? body.publicPhone.trim().slice(0, 40) : ''
   const phone = /^[+\d(][\d\s().+-]{6,38}$/.test(rawPhone) && rawPhone.replace(/\D/g, '').length >= 7 ? rawPhone : null
   const contactSourceUrl = validWebUrl(body.contactSourceUrl)
+  const personSourceUrl = validWebUrl(body.personSourceUrl)
+  const personSourceValid = personSourceUrl && website && new URL(personSourceUrl).hostname.toLowerCase().replace(/^www\./, '') === new URL(website).hostname.toLowerCase().replace(/^www\./, '')
+  const contactName = personSourceValid && typeof body.contactName === 'string' ? body.contactName.trim().slice(0, 160) : null
+  const contactJobTitle = contactName && typeof body.contactJobTitle === 'string' ? body.contactJobTitle.trim().slice(0, 160) : null
+  const contactDepartment = contactName && typeof body.contactDepartment === 'string' ? body.contactDepartment.trim().slice(0, 100) : null
   const requestedOwnerId = typeof body.ownerId === 'string' ? body.ownerId.trim() : ''
   const categoryId = typeof body.categoryId === 'string' ? body.categoryId : ''
   if (!businessName || !website || !sourceUrl || !categoryId) return NextResponse.json({ error: 'Business, website, source link, and category are required.' }, { status: 400 })
@@ -68,9 +73,9 @@ export async function POST(request: Request) {
   try {
     await prepareEmailAutomation(admin.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))
     await pool.query(
-      `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "updatedAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())`,
-      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${contactSourceUrl ? ` | Contact source: ${contactSourceUrl}` : ''}`, summary],
+      `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "contactName", "contactJobTitle", "contactDepartment", "updatedAt")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())`,
+      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${contactSourceUrl ? ` | Contact source: ${contactSourceUrl}` : ''}${personSourceValid && contactName ? ` | Person source: ${personSourceUrl}` : ''}`, summary, contactName, contactJobTitle, contactDepartment],
     )
     after(() => processEmailQueue(admin.organizationId).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, id: leadId, ownerId }, { status: 201 })

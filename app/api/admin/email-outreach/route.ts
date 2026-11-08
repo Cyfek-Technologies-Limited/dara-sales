@@ -1,7 +1,7 @@
 import { after, NextResponse } from 'next/server'
 import { getAdminSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
-import { getEmailServerConfig, processEmailQueue, SmtpError } from '@/lib/email-outreach'
+import { getEmailServerConfig, processEmailQueue, queueSavedLeads, SmtpError } from '@/lib/email-outreach'
 
 import { activateOrganizationCampaign, pauseOrganizationCampaign } from '@/lib/email-campaigns'
 import { smtpReady } from '@/lib/smtp-mailbox'
@@ -70,11 +70,18 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const id = admin.organization.id
   try {
+    if (body.action === 'process') {
+      const config = await getEmailServerConfig(id)
+      if (!config?.enabled) return NextResponse.json({ error: 'Outreach is paused.' }, { status: 409 })
+      after(() => processEmailQueue(id).then(() => {}).catch(() => console.error('[email] Background processing failed')))
+      return NextResponse.json({ ok: true }, { status: 202 })
+    }
     if (body.action === 'save' || body.action === 'activate') {
       if (body.action === 'activate' && body.confirmed !== true) throw new SmtpError('Review and approve your organization\'s message before activating outreach.')
       await saveProfile(id, body)
       if (body.action === 'activate') {
         await activateOrganizationCampaign(id, body)
+        await queueSavedLeads(id)
         after(() => processEmailQueue(id).then(() => {}).catch(() => console.error('[email] Background sync failed')))
       }
       return NextResponse.json({ ok: true, message: body.action === 'activate' ? 'Your organization\'s outreach is active. Matching leads will join automatically.' : 'Your organization\'s message and audience have been saved.' })

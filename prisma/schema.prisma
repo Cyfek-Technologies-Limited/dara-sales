@@ -187,6 +187,8 @@ model SalesLead {
   ownerId              String?
   businessName         String
   contactName          String?
+  contactJobTitle      String?
+  contactDepartment    String?
   email                String?
   phone                String?
   industry             String?

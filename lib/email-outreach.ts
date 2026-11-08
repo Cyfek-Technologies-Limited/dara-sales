@@ -11,8 +11,7 @@ export async function getEmailServerConfig(organizationId: string) {
 }
 export const prepareEmailAutomation = getEmailServerConfig
 
-export async function processEmailQueue(organizationId?: string) {
-  if (!smtpReady() || process.env.EMAIL_AUTOMATION_ENABLED === 'false') return 0
+export async function queueSavedLeads(organizationId?: string) {
   await pool.query(`INSERT INTO "EmailSyncJob" ("id", "organizationId", "leadId", "email", "campaignId")
     SELECT gen_random_uuid()::text, l."organizationId", l."id", LOWER(TRIM(l."email")), a."campaignId"
     FROM "SalesLead" l JOIN "EmailAutomation" a ON a."organizationId" = l."organizationId"
@@ -24,6 +23,11 @@ export async function processEmailQueue(organizationId?: string) {
       AND LENGTH(TRIM(l."email")) <= 254 AND TRIM(l."email") ~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'
     ON CONFLICT ("organizationId", "email") DO UPDATE SET "campaignId" = EXCLUDED."campaignId", "status" = 'QUEUED', "lastError" = NULL, "updatedAt" = NOW()
     WHERE "EmailSyncJob"."status" = 'CANCELLED' AND "EmailSyncJob"."attempts" = 0`, [organizationId || null])
+}
+
+export async function processEmailQueue(organizationId?: string) {
+  if (!smtpReady() || process.env.EMAIL_AUTOMATION_ENABLED === 'false') return 0
+  await queueSavedLeads(organizationId)
   // Never automatically resend an interrupted SMTP delivery: acceptance may already have occurred.
   await pool.query(`UPDATE "EmailSyncJob" SET "status" = 'UNKNOWN', "lastError" = 'Sending was interrupted; check the mailbox before sending again.'
     WHERE "status" = 'SENDING' AND "lockedUntil" < NOW() AND ($1::text IS NULL OR "organizationId" = $1)`, [organizationId || null])
@@ -79,9 +83,16 @@ export async function processEmailQueue(organizationId?: string) {
         await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SENT', "sentAt" = NOW(), "messageId" = $2,
           "lastError" = NULL, "lockedUntil" = NULL, "updatedAt" = NOW() WHERE "id" = $1`, [job.id, result.messageId])
         processed++
-      } catch {
+      } catch (error) {
+        const smtpError = error as { responseCode?: number; command?: string; code?: string }
+        const rejected = typeof smtpError.responseCode === 'number' && smtpError.responseCode >= 400
+        const beforeData = ['CONN','EHLO','HELO','STARTTLS','AUTH','AUTH PLAIN','AUTH LOGIN','MAIL FROM','RCPT TO'].includes(smtpError.command || '') || smtpError.code === 'EAUTH'
+        const uncertain = sending && !rejected && !beforeData
+        const reason = smtpError.code === 'EAUTH' ? 'Mailbox sign-in was rejected. Check the SMTP/app password and provider permissions.'
+          : rejected ? `The mail server rejected this email (SMTP ${smtpError.responseCode}). Check your mailbox limits and recipient address.`
+          : uncertain ? 'Delivery could not be confirmed. Check your mailbox before sending again.' : 'Could not connect to the mailbox. Check its SMTP settings.'
         await client.query(`UPDATE "EmailSyncJob" SET "status" = $2, "lastError" = $3, "lockedUntil" = NULL, "updatedAt" = NOW() WHERE "id" = $1`,
-          [job.id, sending ? 'UNKNOWN' : 'FAILED', sending ? 'Delivery could not be confirmed. Check your mailbox before sending again.' : 'Could not connect to the mailbox. Check its SMTP settings.'])
+          [job.id, uncertain ? 'UNKNOWN' : 'FAILED', reason])
       }
     } finally {
       if (locked) await client.query('SELECT pg_advisory_unlock(hashtext($1))', [lockName])
