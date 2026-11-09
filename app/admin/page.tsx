@@ -21,7 +21,7 @@ export default async function AdminDashboard() {
   ).rows[0];
   if (!organization) redirect("/onboarding");
 
-  const [staffResult, stagesResult, outreachResult, recentResult, activityResult] =
+  const [staffResult, stagesResult, outreachResult, recentResult, activityResult, emailResult] =
     await Promise.all([
       pool.query(
         `SELECT m."authUserId", m."jobTitle", u."name", u."email",
@@ -40,8 +40,7 @@ export default async function AdminDashboard() {
               COUNT(*) FILTER (WHERE "stage"='CLIENT')::int AS client,
               COUNT(*) FILTER (WHERE "stage"='ONBOARDED')::int AS onboarded,
               COUNT(*) FILTER (WHERE "stage"='CAMPAIGN_SUCCESSFUL')::int AS successful,
-              COUNT(*)::int AS total,
-              COALESCE(SUM("advertiserSpend") FILTER (WHERE "stage"='CAMPAIGN_SUCCESSFUL'),0)::text AS spend
+              COUNT(*)::int AS total
        FROM "SalesLead" WHERE "organizationId"=$1`,
         [organization.id]
       ),
@@ -65,8 +64,12 @@ export default async function AdminDashboard() {
            AND (l."createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Lagos')::date = days.day::date
          GROUP BY days.day ORDER BY days.day`, [organization.id]
       ),
+      pool.query(
+        `SELECT COUNT(*)::int AS count FROM "EmailSyncJob" WHERE "organizationId" = $1 AND "status" = 'SENT'`, [organization.id]
+      ),
     ]);
 
+  const totalEmailsSent = Number(emailResult.rows[0]?.count || 0);
   const staff = staffResult.rows;
   const stageRow = stagesResult.rows[0];
   const stageCounts: SalesStageCounts = {
@@ -104,7 +107,7 @@ export default async function AdminDashboard() {
       <div className="dashboard-frame">
         <DashboardSidebar role="ADMIN" userName={adminName} userEmail={session.user.email} organizationName={organization.name} />
         <section className="dashboard-content">
-          <AdminDashboardOverview organizationName={organization.name} today={today} stageCounts={stageCounts} totalLeads={totalLeads} activeStaff={activeStaff} totalOutreach={totalOutreach} spend={stageRow.spend} staff={staff} businesses={recentResult.rows} activity={activity} actions={<>{planExceeded && <UpgradePlanButton currentPlan={organization.plan || 'FREE'} />}<InviteLinkButton /></>} />
+          <AdminDashboardOverview organizationName={organization.name} today={today} stageCounts={stageCounts} totalLeads={totalLeads} activeStaff={activeStaff} totalOutreach={totalOutreach} totalEmailsSent={totalEmailsSent} staff={staff} businesses={recentResult.rows} activity={activity} actions={<>{planExceeded && <UpgradePlanButton currentPlan={organization.plan || 'FREE'} />}<InviteLinkButton /></>} />
         </section>
       </div>
     </main>

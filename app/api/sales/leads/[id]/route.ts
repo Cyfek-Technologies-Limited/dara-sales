@@ -26,7 +26,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const stage = typeof body.stage === 'string' ? body.stage.toUpperCase() : ''
   const spend = body.advertiserSpend === undefined ? undefined : Number(body.advertiserSpend)
   if (!stages.includes(stage) || (spend !== undefined && (!Number.isFinite(spend) || spend < 0))) {
-    return NextResponse.json({ error: 'Choose a valid pipeline stage and non-negative advertiser spend.' }, { status: 400 })
+    return NextResponse.json({ error: 'Choose a valid pipeline stage and non-negative deal value.' }, { status: 400 })
   }
   const current = (await pool.query(
     `SELECT "stage", "advertiserSpend"::text AS "advertiserSpend" FROM "SalesLead" WHERE "id" = $1 AND "organizationId" = $2 AND "ownerId" = $3`,
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   const finalSpend = spend ?? Number(current.advertiserSpend)
   if (stage === 'CAMPAIGN_SUCCESSFUL' && finalSpend <= 0) {
-    return NextResponse.json({ error: 'Enter the advertiser spend before marking a campaign successful.' }, { status: 400 })
+    return NextResponse.json({ error: 'Enter the deal value before marking a campaign successful.' }, { status: 400 })
   }
   await pool.query(
     `UPDATE "SalesLead" SET "stage" = $1, "advertiserSpend" = $2,

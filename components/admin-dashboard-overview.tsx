@@ -6,16 +6,15 @@ import type { SalesStageCounts } from '@/components/sales-dashboard-widgets'
 type Staff = { authUserId: string; name: string | null; email: string; outreachToday: number; leadCount: number }
 type Business = { id: string; businessName: string; stage: string; industry: string | null; ownerName: string | null }
 export type DailyActivity = { label: string; leads: number }
-type Props = { organizationName: string; today: string; stageCounts: SalesStageCounts; totalLeads: number; activeStaff: number; totalOutreach: number; spend: string; staff: Staff[]; businesses: Business[]; activity: DailyActivity[]; actions: ReactNode }
+type Props = { organizationName: string; today: string; stageCounts: SalesStageCounts; totalLeads: number; activeStaff: number; totalOutreach: number; totalEmailsSent: number; staff: Staff[]; businesses: Business[]; activity: DailyActivity[]; actions: ReactNode }
 
 const number = (value: number) => new Intl.NumberFormat('en-NG').format(value)
-const money = (value: string) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(value || 0))
 const stages = [
   { key: 'LEAD', label: 'Leads', description: 'Businesses ready for the first conversation.', color: '#ee394f' },
   { key: 'PROSPECT', label: 'Prospects', description: 'Qualified opportunities worth pursuing.', color: '#f38b3c' },
   { key: 'CLIENT', label: 'Clients', description: 'Businesses that have chosen to work with you.', color: '#ebc736' },
-  { key: 'ONBOARDED', label: 'Onboarded', description: 'Clients getting ready for their campaigns.', color: '#28ae77' },
-  { key: 'CAMPAIGN_SUCCESSFUL', label: 'Campaigns live', description: 'Successful campaigns and completed wins.', color: '#4761a9' },
+  { key: 'ONBOARDED', label: 'Onboarded', description: 'Clients getting ready for service delivery.', color: '#28ae77' },
+  { key: 'CAMPAIGN_SUCCESSFUL', label: 'Completed deals', description: 'Successfully completed client engagements.', color: '#4761a9' },
 ] as const
 
 function GrowthChart({ activity }: { activity: DailyActivity[] }) {
@@ -40,18 +39,19 @@ function GrowthChart({ activity }: { activity: DailyActivity[] }) {
   </>
 }
 
-export function AdminDashboardOverview({ organizationName, today, stageCounts, totalLeads, activeStaff, totalOutreach, spend, staff, businesses, activity, actions }: Props) {
-  const clientWins = stageCounts.CLIENT + stageCounts.ONBOARDED + stageCounts.CAMPAIGN_SUCCESSFUL
-  const conversion = totalLeads ? Math.round(clientWins / totalLeads * 100) : 0
+export function AdminDashboardOverview({ organizationName, today, stageCounts, totalLeads, activeStaff, totalOutreach, totalEmailsSent, staff, businesses, activity, actions }: Props) {
+  const coverage = totalLeads ? Math.round(totalEmailsSent / totalLeads * 1000) / 10 : 0
   const circumference = 2 * Math.PI * 63
-  const maxStage = Math.max(1, ...Object.values(stageCounts))
+  const maxDailyLeads = Math.max(1, ...activity.map(day => day.leads))
+  const leadsToday = activity[activity.length - 1]?.leads || 0
+  const dailyColors = ['#985ba8', '#4761a9', '#28ae77', '#f38b3c', '#c66aac', '#ee394f', '#8a509b']
   const weeklyLeads = activity.reduce((sum, day) => sum + day.leads, 0)
   return <>
     <div className="dashboard-overview-heading"><div><h1>Dashboard</h1><p>{organizationName} / {today}</p></div><div className="flex flex-wrap items-center gap-3"><Link href="/admin/prospecting" className="inline-flex items-center gap-2 rounded-[5px] border-[1px] border-black/30 bg-white px-4 py-2.5 text-xs font-medium text-[#875095]">Find prospects<ArrowUpRight className="size-3.5" /></Link>{actions}</div></div>
     <div className="dashboard-overview-grid">
-      <section className="dashboard-panel dashboard-conversion"><h2 className="dashboard-panel-title">Client conversion</h2><div className="dashboard-ring"><svg viewBox="0 0 165 165" aria-hidden="true"><circle cx="82.5" cy="82.5" r="63" fill="none" stroke="#30263f" strokeWidth="23" /><circle cx="82.5" cy="82.5" r="63" fill="none" stroke="#443451" strokeWidth="12" /><circle cx="82.5" cy="82.5" r="63" fill="none" stroke="#c66aac" strokeWidth="12" strokeDasharray={`${conversion / 100 * circumference} ${circumference}`} strokeLinecap={conversion ? 'round' : 'butt'} /></svg><strong>{conversion}%</strong></div><p className="dashboard-panel-caption text-center">{number(clientWins)} client wins from {number(totalLeads)} businesses</p></section>
+      <section className="dashboard-panel dashboard-conversion"><h2 className="dashboard-panel-title">Email coverage</h2><div className="dashboard-ring"><svg viewBox="0 0 165 165" aria-hidden="true"><circle cx="82.5" cy="82.5" r="63" fill="none" stroke="#30263f" strokeWidth="23" /><circle cx="82.5" cy="82.5" r="63" fill="none" stroke="#443451" strokeWidth="12" /><circle cx="82.5" cy="82.5" r="63" fill="none" stroke="#c66aac" strokeWidth="12" strokeDasharray={`${Math.min(coverage, 100) / 100 * circumference} ${circumference}`} strokeLinecap={coverage ? 'round' : 'butt'} /></svg><strong>{coverage}%</strong></div><p className="dashboard-panel-caption text-center">{number(totalEmailsSent)} emails sent / {number(totalLeads)} saved leads</p></section>
 
-      <section className="dashboard-panel dashboard-spend"><h2 className="dashboard-panel-title">Ad spend</h2><p className="dashboard-panel-caption">Successful campaigns</p><p className="dashboard-spend-value">{money(spend)}</p><p className="dashboard-panel-caption">{number(stageCounts.CAMPAIGN_SUCCESSFUL)} campaigns successful</p><div className="dashboard-mini-bars" role="img" aria-label={stages.map((stage) => `${stage.label}: ${stageCounts[stage.key]}`).join(', ')}>{stages.map((stage) => <div key={stage.key} title={`${stage.label}: ${stageCounts[stage.key]}`}><span style={{ height: `${stageCounts[stage.key] / maxStage * 60}px`, background: stage.color }} /><small>{stageCounts[stage.key]}</small></div>)}</div><p className="dashboard-panel-caption mt-2">Current pipeline distribution</p></section>
+      <section className="dashboard-panel dashboard-spend"><h2 className="dashboard-panel-title">Leads saved</h2><p className="dashboard-panel-caption">Added to your pipeline today</p><p className="dashboard-spend-value">{number(leadsToday)}</p><p className="dashboard-panel-caption">{number(weeklyLeads)} saved in the last 7 days</p><div className="dashboard-mini-bars" role="img" aria-label={`Daily leads saved: ${activity.map(day => `${day.label}: ${day.leads}`).join(', ')}`}>{activity.map((day, index) => <div key={day.label} title={`${day.label}: ${day.leads} leads saved`}><span style={{ height: `${day.leads / maxDailyLeads * 60}px`, background: dailyColors[index % dailyColors.length] }} /><small>{number(day.leads)}</small><small>{day.label}</small></div>)}</div><p className="dashboard-panel-caption mt-2">Daily additions - last 7 days</p><Link href="/admin/leads" className="dashboard-panel-link mt-2 inline-block">View saved leads</Link></section>
 
       <section className="dashboard-panel dashboard-trend"><div className="dashboard-panel-heading"><div><h2 className="dashboard-panel-title">Lead activity</h2><p className="dashboard-panel-caption">{number(weeklyLeads)} businesses added in the last 7 days</p></div><span className="dashboard-panel-caption">Last 7 days</span></div><GrowthChart activity={activity} /></section>
 

@@ -72,7 +72,7 @@ export default async function AllLeadsPage() {
           <section className="mt-5 overflow-hidden rounded-2xl border-[1px] border-black/30 bg-white">
             {leads.length ? <div className="overflow-x-auto">
               <table className="w-full min-w-[850px] text-left text-xs">
-                <thead className="bg-[#f4f6f9] text-[10px] uppercase tracking-[0.12em] text-[#657286]"><tr><th className="px-5 py-3">Business / contact</th><th className="px-5 py-3">Stage</th><th className="px-5 py-3">Outreach</th><th className="px-5 py-3">Last contacted</th><th className="px-5 py-3">Advertiser spend</th></tr></thead>
+                <thead className="bg-[#f4f6f9] text-[10px] uppercase tracking-[0.12em] text-[#657286]"><tr><th className="px-5 py-3">Business / contact</th><th className="px-5 py-3">Stage</th><th className="px-5 py-3">Outreach</th><th className="px-5 py-3">Last contacted</th><th className="px-5 py-3">Deal value</th></tr></thead>
                 <tbody className="divide-y divide-black/30">{leads.map((lead) => <tr key={lead.id}>
                   <td className="px-5 py-4"><p className="font-semibold">{lead.businessName}</p><p className="mt-1 text-[11px] text-[#657286]">{lead.contactName || 'Contact not added'}{lead.industry ? ` · ${lead.industry}` : ''}{lead.categoryName ? ` · ${lead.categoryName}` : ''}</p><p className="mt-1 text-[11px] text-[#657286]">{[lead.email, lead.phone].filter(Boolean).join(' · ') || 'No contact details'}</p>{lead.website && <a className="mt-1 inline-block text-[11px] underline" href={lead.website} target="_blank" rel="noreferrer">Website</a>}</td>
                   <td className="px-5 py-4"><span className="rounded-full bg-[#eee9f1] px-3 py-1.5 text-[10px] font-semibold">{stageLabel(lead.stage)}</span></td>
