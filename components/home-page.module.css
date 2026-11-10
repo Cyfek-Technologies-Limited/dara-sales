@@ -125,8 +125,8 @@
 .centerHeading .eyebrow { justify-content:center; }
 .centerHeading > p:last-child { max-width:410px; margin:20px auto 0; font-size:13px; line-height:1.9; color:var(--muted); }
 .steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:45px; margin-top:45px; }
-.steps article { position:relative; }
-.steps article:not(:last-child)::after { content:''; position:absolute; height:1px; background:#dce6e0; left:59px; right:0; top:22px; }
+.steps article { position:relative; padding:26px 24px 28px; border:1px solid #0b1f3a40; border-radius:14px; background:#fff; box-shadow:0 5px 16px #0b1f3a0d; }
+.steps article:not(:last-child)::after { content:''; position:absolute; height:1px; background:#dce6e0; left:83px; right:24px; top:48px; }
 .stepNumber { position:relative; display:grid; place-items:center; width:44px; height:44px; border:1px solid #b8cfc4; border-radius:50%; color:var(--teal); background:#f2f7f4; font-size:12px; font-weight:600; z-index:1; }
 .steps h3 { color:var(--ink); font-size:20px; font-weight:550; margin-top:25px; letter-spacing:-.4px; }
 .steps p { color:var(--muted); font-size:13px; line-height:1.9; margin-top:13px; }
