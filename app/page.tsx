@@ -7,7 +7,7 @@ import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
   title: 'Dara | AI prospecting and sales team management',
-  description: 'Discover businesses in your target industries and locations, save leads with source links, organize team outreach, and track prospects and client wins in one workspace.',
+  description: 'Discover businesses in your target industries and locations, save prospects with source links, organize team outreach, and track prospects and client wins in one workspace.',
 }
 
 export const viewport: Viewport = {

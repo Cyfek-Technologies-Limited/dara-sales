@@ -1,6 +1,7 @@
+import { salesStageLabel as stageLabel } from '@/lib/sales-stage-label'
 const stageSteps = [
-  { key: 'LEAD', label: 'Lead' },
-  { key: 'PROSPECT', label: 'Prospect' },
+  { key: 'LEAD', label: 'Prospect' },
+  { key: 'PROSPECT', label: 'Lead' },
   { key: 'CLIENT', label: 'Client' },
   { key: 'ONBOARDED', label: 'Onboarded' },
   { key: 'CAMPAIGN_SUCCESSFUL', label: 'Campaign live' },
@@ -12,7 +13,7 @@ export function SalesStageTracker({ counts }: { counts: SalesStageCounts }) {
   return (
     <section className="rounded-[24px] border-[1px] border-black/30 bg-white p-5 shadow-[0_8px_24px_rgba(7,18,31,0.04)] sm:p-7">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><p className="font-serif text-lg font-semibold">Lead journey</p><p className="mt-1 text-xs text-[#657286]">Track businesses from first contact to a successful campaign.</p></div>
+        <div><p className="font-serif text-lg font-semibold">Prospect journey</p><p className="mt-1 text-xs text-[#657286]">Track businesses from first contact to a successful campaign.</p></div>
         <span className="rounded-full bg-[#eee9f1] px-3 py-1.5 text-[10px] font-semibold text-[#30263f]">{Object.values(counts).reduce((sum, count) => sum + count, 0)} active records</span>
       </div>
       <div className="mt-7 grid grid-cols-5 items-start">
@@ -42,7 +43,6 @@ export type RecentLead = {
   ownerEmail?: string | null
 }
 
-const stageLabel = (stage: string) => stage.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
 
 export function RecentLeadRow({ lead }: { lead: RecentLead }) {
   return (

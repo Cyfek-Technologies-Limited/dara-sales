@@ -1,3 +1,4 @@
+import { salesStageLabel as stageLabel } from '@/lib/sales-stage-label'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -22,7 +23,6 @@ type LeadRow = {
 }
 
 const money = (value: string | number) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(value || 0))
-const stageLabel = (stage: string) => stage.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
 const dateLabel = (date: Date | null) => date ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Africa/Lagos' }).format(date) : 'No outreach yet'
 
 export default async function AllLeadsPage() {
@@ -62,9 +62,9 @@ export default async function AllLeadsPage() {
           <header className="flex flex-col justify-between gap-4 border-b-[1px] border-black/30 pb-5 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs text-[#657286]">{member.organizationName} · {member.jobTitle || 'Sales team member'}</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">All leads &amp; prospects</h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#657286]">Your complete list of businesses, including leads you contacted on earlier days.</p>
-              <Link href="/dashboard/leads" className="mt-3 inline-block text-xs font-semibold underline">View today&apos;s leads</Link>
+              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">All prospects &amp; leads</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#657286]">Your complete list of businesses, including prospects you contacted on earlier days.</p>
+              <Link href="/dashboard/leads" className="mt-3 inline-block text-xs font-semibold underline">View today&apos;s prospects</Link>
             </div>
             <span className="rounded-full bg-[#eee9f1] px-3 py-2 text-xs font-semibold">{leads.length} {leads.length === 1 ? 'business' : 'businesses'}</span>
           </header>
@@ -81,7 +81,7 @@ export default async function AllLeadsPage() {
                   <td className="px-5 py-4 font-semibold">{money(lead.advertiserSpend)}</td>
                 </tr>)}</tbody>
               </table>
-            </div> : <div className="p-12 text-center"><h2 className="font-semibold">No leads yet</h2><p className="mt-1 text-sm text-[#657286]">Businesses you record will stay here, even after today.</p></div>}
+            </div> : <div className="p-12 text-center"><h2 className="font-semibold">No prospects yet</h2><p className="mt-1 text-sm text-[#657286]">Businesses you record will stay here, even after today.</p></div>}
           </section>
         </section>
       </div>

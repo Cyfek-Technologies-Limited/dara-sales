@@ -32,7 +32,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     `SELECT "stage", "advertiserSpend"::text AS "advertiserSpend" FROM "SalesLead" WHERE "id" = $1 AND "organizationId" = $2 AND "ownerId" = $3`,
     [id, member.organizationId, session.user.id],
   )).rows[0]
-  if (!current) return NextResponse.json({ error: 'Lead not found.' }, { status: 404 })
+  if (!current) return NextResponse.json({ error: 'Prospect not found.' }, { status: 404 })
   if (!nextStages[current.stage]?.includes(stage)) {
     return NextResponse.json({ error: `Move this record forward from ${current.stage.replaceAll('_', ' ').toLowerCase()} before selecting that stage.` }, { status: 409 })
   }

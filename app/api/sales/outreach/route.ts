@@ -16,13 +16,13 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const channel = typeof body.channel === 'string' ? body.channel.toUpperCase() : ''
   if (typeof body.leadId !== 'string' || !channels.includes(channel)) {
-    return NextResponse.json({ error: 'Choose a valid lead and outreach channel.' }, { status: 400 })
+    return NextResponse.json({ error: 'Choose a valid prospect and outreach channel.' }, { status: 400 })
   }
   const lead = (await pool.query(
     `SELECT "id" FROM "SalesLead" WHERE "id" = $1 AND "organizationId" = $2 AND "ownerId" = $3`,
     [body.leadId, member.organizationId, session.user.id],
   )).rows[0]
-  if (!lead) return NextResponse.json({ error: 'Lead not found.' }, { status: 404 })
+  if (!lead) return NextResponse.json({ error: 'Prospect not found.' }, { status: 404 })
   await pool.query(
     `INSERT INTO "SalesOutreach" ("id", "organizationId", "leadId", "ownerId", "channel", "platform", "note", "outcome") VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [crypto.randomUUID(), member.organizationId, lead.id, session.user.id, channel, body.platform || null, body.note || null, body.outcome || null],

@@ -85,7 +85,7 @@ export async function POST(request: Request) {
         await queueSavedLeads(id)
         after(() => processEmailQueue(id).then(() => {}).catch(() => console.error('[email] Background sync failed')))
       }
-      return NextResponse.json({ ok: true, message: body.action === 'activate' ? 'Your organization\'s outreach is active. Matching leads will join automatically.' : 'Your organization\'s message and audience have been saved.' })
+      return NextResponse.json({ ok: true, message: body.action === 'activate' ? 'Your organization\'s outreach is active. Matching prospects will join automatically.' : 'Your organization\'s message and audience have been saved.' })
     }
     if (body.action === 'pause') {
       await pauseOrganizationCampaign(id)

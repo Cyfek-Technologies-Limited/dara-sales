@@ -47,7 +47,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const staff = await getStaff()
   if (!staff) return NextResponse.json({ error: 'Sign in with an active staff account.' }, { status: 401 })
-  if (!staff.industryName) return NextResponse.json({ error: 'Your admin must assign an industry before you can add leads.' }, { status: 409 })
+  if (!staff.industryName) return NextResponse.json({ error: 'Your admin must assign an industry before you can add prospects.' }, { status: 409 })
   const body = await request.json().catch(() => ({}))
   const businessName = typeof body.businessName === 'string' ? body.businessName.trim() : ''
   const channel = typeof body.channel === 'string' ? body.channel.toUpperCase() : ''
@@ -83,8 +83,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, id: leadId }, { status: 201 })
   } catch (error) {
     await client.query('ROLLBACK')
-    console.error('[sales] Lead creation failed:', error)
-    return NextResponse.json({ error: 'Could not save this lead.' }, { status: 500 })
+    console.error('[sales] Prospect creation failed:', error)
+    return NextResponse.json({ error: 'Could not save this prospect.' }, { status: 500 })
   } finally {
     client.release()
   }

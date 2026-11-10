@@ -27,17 +27,17 @@ export default function AdminAddLead({ industries, categories, teammates }: { in
     try {
       const response = await fetch('/api/admin/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form), signal: AbortSignal.timeout(45000) })
       const result = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(result.error || 'Could not save this lead.')
-      setSuccess(`${form.businessName} added to your leads.`); setForm(empty); dialog.current?.close(); router.refresh()
+      if (!response.ok) throw new Error(result.error || 'Could not save this prospect.')
+      setSuccess(`${form.businessName} added to your prospects.`); setForm(empty); dialog.current?.close(); router.refresh()
     } catch (cause) {
-      setError(cause instanceof Error && cause.name === 'TimeoutError' ? 'Saving took too long. Check your leads before trying again.' : cause instanceof Error ? cause.message : 'Could not save this lead.')
+      setError(cause instanceof Error && cause.name === 'TimeoutError' ? 'Saving took too long. Check your prospects before trying again.' : cause instanceof Error ? cause.message : 'Could not save this prospect.')
     } finally { inFlight.current = false; setBusy(false) }
   }
   return <div>
-    <button type="button" onClick={() => { setError(''); setSuccess(''); dialog.current?.showModal() }} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white hover:bg-[#173b65]"><Plus className="size-4" />Add lead</button>
+    <button type="button" onClick={() => { setError(''); setSuccess(''); dialog.current?.showModal() }} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white hover:bg-[#173b65]"><Plus className="size-4" />Add prospect</button>
     {success && <p role="status" className="mt-2 max-w-xs text-xs text-emerald-800">{success}</p>}
     <dialog ref={dialog} aria-labelledby="add-lead-title" onCancel={event => { if (inFlight.current) event.preventDefault() }} onClick={event => { if (event.target === event.currentTarget) close() }} className="m-auto max-h-[90dvh] w-[94vw] max-w-2xl overflow-y-auto rounded-2xl border-[1px] border-black/30 bg-white p-0 text-[#0b1f3a] shadow-2xl backdrop:bg-slate-950/60">
-      <header className="flex items-start justify-between gap-4 border-b border-black/20 p-5"><div><h2 id="add-lead-title" className="text-xl font-bold">Add a lead</h2><p className="mt-1 text-sm text-slate-600">Enter the business details yourself. Only the business name is required.</p></div><button type="button" aria-label="Close add lead form" disabled={busy} onClick={close} className="rounded-lg p-1 disabled:opacity-50"><X className="size-5" /></button></header>
+      <header className="flex items-start justify-between gap-4 border-b border-black/20 p-5"><div><h2 id="add-lead-title" className="text-xl font-bold">Add a prospect</h2><p className="mt-1 text-sm text-slate-600">Enter the business details yourself. Only the business name is required.</p></div><button type="button" aria-label="Close add prospect form" disabled={busy} onClick={close} className="rounded-lg p-1 disabled:opacity-50"><X className="size-5" /></button></header>
       <form onSubmit={submit} className="p-5">
         {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2 disabled:opacity-60">
@@ -49,11 +49,11 @@ export default function AdminAddLead({ industries, categories, teammates }: { in
           <label className="text-sm font-semibold">Industry<select value={form.industryId} onChange={e => setForm(current => ({ ...current, industryId: e.target.value, categoryId: '' }))} className={field}><option value="">No industry selected</option>{industries.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label className="text-sm font-semibold">Category<select disabled={!form.industryId || busy} value={form.categoryId} onChange={e => update('categoryId', e.target.value)} className={field}><option value="">No category selected</option>{categories.filter(item => item.industryId === form.industryId).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label className="text-sm font-semibold">Assign to teammate<select value={form.ownerId} onChange={e => update('ownerId', e.target.value)} className={field}><option value="">Unassigned</option>{teammates.map(item => <option key={item.id} value={item.id}>{item.name || item.email}</option>)}</select></label>
-          <label className="text-sm font-semibold">Lead source<input maxLength={600} value={form.source} onChange={e => update('source', e.target.value)} className={field} placeholder="Referral, event, website..." /></label>
+          <label className="text-sm font-semibold">Prospect source<input maxLength={600} value={form.source} onChange={e => update('source', e.target.value)} className={field} placeholder="Referral, event, website..." /></label>
           <label className="text-sm font-semibold sm:col-span-2">Notes<textarea maxLength={5000} value={form.notes} onChange={e => update('notes', e.target.value)} className={`${field} min-h-24`} /></label>
         </fieldset>
-        <p className="mt-4 text-xs leading-5 text-slate-500">If email outreach is active, matching leads with an email address can receive your approved message automatically.</p>
-        <div className="mt-5 flex justify-end gap-3 border-t border-black/20 pt-4"><button type="button" disabled={busy} onClick={close} className="rounded-xl border border-black/30 px-4 py-2.5 text-sm font-semibold disabled:opacity-50">Cancel</button><button disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{busy && <LoaderCircle className="size-4 animate-spin" />}{busy ? 'Saving lead...' : 'Save lead'}</button></div>
+        <p className="mt-4 text-xs leading-5 text-slate-500">If email outreach is active, matching prospects with an email address can receive your approved message automatically.</p>
+        <div className="mt-5 flex justify-end gap-3 border-t border-black/20 pt-4"><button type="button" disabled={busy} onClick={close} className="rounded-xl border border-black/30 px-4 py-2.5 text-sm font-semibold disabled:opacity-50">Cancel</button><button disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{busy && <LoaderCircle className="size-4 animate-spin" />}{busy ? 'Saving prospect...' : 'Save prospect'}</button></div>
       </form>
     </dialog>
   </div>

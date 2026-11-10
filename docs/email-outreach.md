@@ -1,6 +1,6 @@
 # Email outreach with Nodemailer
 
-Dara sends one approved initial email through each organization's own SMTP mailbox. Smartlead is no longer used. Each organization controls its own sender name, email, audience, message, and address. Unassigned leads are supported. SMTP sending does not automate replies or follow-up sequences.
+Dara sends one approved initial email through each organization's own SMTP mailbox. Smartlead is no longer used. Each organization controls its own sender name, email, audience, message, and address. Unassigned prospects are supported. SMTP sending does not automate replies or follow-up sequences.
 
 ## Platform setup
 
@@ -19,8 +19,8 @@ Smartlead and Google mailbox OAuth variables are no longer read. Normal Google l
 
 1. Open Email outreach and enter its sender business name, email, SMTP hostname, port 465 or 587, and SMTP/app password.
 2. Click Connect business mailbox. The backend verifies SMTP authentication without sending an email. Some providers require app passwords, administrator approval, or do not allow password-based SMTP. Nodemailer does not bypass provider rules, mailbox quotas, or Google app restrictions.
-3. Choose the connected sender and audience. Write the subject and message; `{{company_name}}` substitutes the lead's business name. Enter the company's address.
-4. Review and approve, then start automation. Existing matching saved leads are included. Saving new matching leads also starts a queue-processing attempt.
+3. Choose the connected sender and audience. Write the subject and message; `{{company_name}}` substitutes the prospect's business name. Enter the company's address.
+4. Review and approve, then start automation. Existing matching saved prospects are included. Saving new matching prospects also starts a queue-processing attempt.
 5. Pause before editing or reconnecting. Pausing prevents new dispatches; an email already handed to SMTP cannot be recalled.
 
 There are no provider API keys or third-party campaign settings in the customer interface. Customers still need an existing mailbox that permits their intended email use. Nodemailer is a free library, not an email hosting service.
@@ -40,7 +40,7 @@ There are no provider API keys or third-party campaign settings in the customer 
 
 In Your message and audience, choose an industry and use Generate subject and email. The business description is prefilled from the signed-in admin's saved AI Prospecting preferences, scoped to the current organization. It can be refined for the current draft. Website-only inputs must first be analyzed in AI Prospecting so a business summary is available.
 
-The backend generates a concise, benefit-focused email using the existing server-only OPENAI_API_KEY and OPENAI_PROSPECTING_MODEL configuration. It sends only the organization name, offering description and selected industry to the AI provider, not mailbox credentials or lead contact details. Generated output uses a strict subject/message schema and is validated before returning. Generation requests are serialized per organization.
+The backend generates a concise, benefit-focused email using the existing server-only OPENAI_API_KEY and OPENAI_PROSPECTING_MODEL configuration. It sends only the organization name, offering description and selected industry to the AI provider, not mailbox credentials or prospect contact details. Generated output uses a strict subject/message schema and is validated before returning. Generation requests are serialized per organization.
 
 Review the preview and choose Use this draft to replace the editable subject and message fields. Regenerate or discard without changing an existing message. Applying a draft clears approval; saving and starting outreach remain separate actions. AI drafts are not sent automatically and should be checked for factual accuracy. Description refinements in this card guide the current generation; update AI Prospecting to change the saved business description.
 
@@ -50,7 +50,7 @@ Email outreach now includes a live monitor above the setup form. Clicking Start 
 
 The visible monitor requests processing of the already-approved queue every 15 seconds; server-side serialization, one-minute gaps, daily caps and suppression checks remain authoritative. Closing the page still requires the protected recurring scheduler for background progress. The UI explains this dependency and shows waiting slots and the rolling daily limit. Mail-server acceptance is clearly distinguished from inbox delivery. Explicit SMTP rejections are marked failed; ambiguous sends remain unconfirmed and are never automatically retried.
 
-Company contacts lists saved LEAD-stage records in the selected industry, with contact person, company, job title, department, email and phone. Unsubscribed and missing-email contacts are labeled. New AI Prospecting searches request named work contacts explicitly published on official company pages, alongside source links. Roles and departments persist with the saved lead. Direct contacts are not guaranteed: general business email/phone may be used, and missing fields remain not listed. Existing saved leads are not automatically researched or enriched by this migration.
+Company contacts lists saved Prospect-stage records in the selected industry, with contact person, company, job title, department, email and phone. Unsubscribed and missing-email contacts are labeled. New AI Prospecting searches request named work contacts explicitly published on official company pages, alongside source links. Roles and departments persist with the saved prospect. Direct contacts are not guaranteed: general business email/phone may be used, and missing fields remain not listed. Existing saved prospects are not automatically researched or enriched by this migration.
 
 No real email was sent to exercise the live monitor during implementation.
 
@@ -58,7 +58,7 @@ No real email was sent to exercise the live monitor during implementation.
 
 Prospecting discovery now follows each sourced business website and up to three official contact links or common contact-page paths. It reads HTML, mailto/tel links, visible text, Organization/LocalBusiness JSON-LD contacts, common HTML entities and email obfuscation. Contact extraction has a per-site deadline, bounded concurrency and a bounded response size. It uses pinned public IPv4 DNS addresses and validates same-business-site redirects before connecting. Pages requiring client-side rendering, inaccessible sites, bot challenges, unsupported encodings or timeouts can still prevent extraction; those cases are not labeled as proof that contacts do not exist.
 
-Email and phone have separate source URLs so data found on different official pages is retained when saving a lead. Contact requirements are checked after extraction. Source-backed search contacts can be retained when direct page access fails. Existing saved leads are not automatically updated; run discovery again for freshly extracted results. These changes require deployment, but no database migration.
+Email and phone have separate source URLs so data found on different official pages is retained when saving a prospect. Contact requirements are checked after extraction. Source-backed search contacts can be retained when direct page access fails. Existing saved prospects are not automatically updated; run discovery again for freshly extracted results. These changes require deployment, but no database migration.
 
 ## Queued without sending
 
@@ -66,8 +66,14 @@ Queued is not evidence of delivery: it means no sending attempt has been recorde
 
 Worker claims use short transactions with an organization row lock and an atomic job status update. They do not depend on session advisory locks surviving correctly across serverless invocations or pooled database connections. Active SENDING leases and rate limits prevent overlapping sends. SMTP DNS lookup is time bounded, and unreadable encrypted credentials produce a specific reconnect instruction.
 
-For read-only diagnostics, run `node scripts/diagnose-outreach.cjs`. It prints readiness flags, counts, timestamps, worker eligibility and lock counts, never mailbox passwords or lead addresses. SQL planning uses EXPLAIN without ANALYZE and does not execute inserts or updates. It does not send emails. A production SMTP delivery must still be confirmed by its resulting SENT/FAILED/UNKNOWN status after deployment.
+For read-only diagnostics, run `node scripts/diagnose-outreach.cjs`. It prints readiness flags, counts, timestamps, worker eligibility and lock counts, never mailbox passwords or prospect addresses. SQL planning uses EXPLAIN without ANALYZE and does not execute inserts or updates. It does not send emails. A production SMTP delivery must still be confirmed by its resulting SENT/FAILED/UNKNOWN status after deployment.
 
 ### Duplicate recipient error (21000)
 
-The queue backfill deduplicates source leads by organization and lowercased, trimmed email before generating job IDs or upserting. PostgreSQL rejects an ON CONFLICT DO UPDATE operation that targets the same recipient more than once in a single statement. Distinct lead IDs or newly generated job IDs do not solve that conflict because the unique key is organization/email. Selection is deterministic (oldest eligible lead, then ID); separate organizations retain independent queues. Existing attempted, sent or active jobs are not reset. Only cancelled, never-attempted jobs can be requeued, with their selected eligible lead and availability refreshed. No database migration or lead deletion is required.
+The queue backfill deduplicates source prospects by organization and lowercased, trimmed email before generating job IDs or upserting. PostgreSQL rejects an ON CONFLICT DO UPDATE operation that targets the same recipient more than once in a single statement. Distinct prospect IDs or newly generated job IDs do not solve that conflict because the unique key is organization/email. Selection is deterministic (oldest eligible prospect, then ID); separate organizations retain independent queues. Existing attempted, sent or active jobs are not reset. Only cancelled, never-attempted jobs can be requeued, with their selected eligible prospect and availability refreshed. No database migration or prospect deletion is required.
+
+## Pipeline terminology
+
+The interface calls outreach contacts **Prospects** and contacts who have responded positively **Leads**. The next stage remains **Client**. New researched and manually saved contacts appear in the prospects pipeline; recording a positive response means advancing them to Lead in the stage selector. This wording is shared by the dashboard, analytics, industry metrics, team views, prospect forms and email outreach.
+
+For compatibility with existing records and automatic email eligibility, persisted stage code `LEAD` is displayed as Prospect, and persisted `PROSPECT` is displayed as Lead. Use `salesStageLabel` for dynamic stage labels. Existing database identifiers and API routes retain their technical names. No migration or reassignment of existing records is needed.

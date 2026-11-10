@@ -10,7 +10,7 @@ export function RemoveTeamMemberButton({ userId, name }: { userId: string; name:
   const [error, setError] = useState('')
 
   async function removeMember() {
-    if (!window.confirm(`Remove ${name} from this workspace? Their saved leads and outreach history will remain.`)) return
+    if (!window.confirm(`Remove ${name} from this workspace? Their saved prospects and outreach history will remain.`)) return
     setPending(true)
     setError('')
     try {

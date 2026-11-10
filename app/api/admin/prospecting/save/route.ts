@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       (LOWER("businessName") = LOWER($2) OR LOWER(COALESCE("website", '')) = LOWER($3)) LIMIT 1`,
     [admin.organizationId, businessName, website],
   )).rows[0]
-  if (duplicate) return NextResponse.json({ error: 'This business is already in your lead pipeline.' }, { status: 409 })
+  if (duplicate) return NextResponse.json({ error: 'This business is already in your prospect pipeline.' }, { status: 409 })
 
   const leadId = crypto.randomUUID()
   try {
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     after(() => processEmailQueue(admin.organizationId).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, id: leadId, ownerId }, { status: 201 })
   } catch (error) {
-    console.error('[prospecting] Could not save business lead', error instanceof Error ? error.message : 'unknown')
-    return NextResponse.json({ error: 'Could not add this business to the leads pipeline.' }, { status: 500 })
+    console.error('[prospecting] Could not save business prospect', error instanceof Error ? error.message : 'unknown')
+    return NextResponse.json({ error: 'Could not add this business to the prospects pipeline.' }, { status: 500 })
   }
 }

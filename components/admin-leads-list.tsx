@@ -1,5 +1,7 @@
 'use client'
 
+import { salesStageLabel as stageLabel } from '@/lib/sales-stage-label'
+
 import { useRef, useState } from 'react'
 import { Building2, ExternalLink, X } from 'lucide-react'
 
@@ -25,7 +27,6 @@ export type AdminLead = {
 }
 
 const money = (value: string | number) => new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(value || 0))
-const stageLabel = (value: string) => value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
 const dateLabel = (value: string | null) => value ? new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lagos' }).format(new Date(value)) : 'Not recorded'
 
 function webUrl(value: string | null) {
@@ -50,15 +51,15 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
 
   return <>
     {leads.length ? <div className="divide-y divide-black/30">{leads.map((lead) => <button type="button" key={lead.id} onClick={() => openLead(lead)} aria-haspopup="dialog" aria-label={`View details for ${lead.businessName}`} className="grid w-full gap-3 px-5 py-4 text-left transition hover:bg-violet-50 focus-visible:bg-violet-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-violet-600 sm:grid-cols-[minmax(0,1.5fr)_minmax(120px,.75fr)_minmax(130px,.8fr)_minmax(130px,.8fr)] sm:items-center">
-      <span className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-800"><Building2 className="size-4" /></span><span className="min-w-0"><span className="block truncate font-serif text-sm font-semibold">{lead.businessName}</span><span className="mt-1 block truncate text-[11px] text-slate-600">{lead.contactName || 'Contact not added'}{lead.industry ? ` / ${lead.industry}` : ''}{lead.email ? ` / ${lead.email}` : ''}</span><span className="mt-1 block text-[10px] font-medium text-violet-700">View full lead details</span></span></span>
+      <span className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-800"><Building2 className="size-4" /></span><span className="min-w-0"><span className="block truncate font-serif text-sm font-semibold">{lead.businessName}</span><span className="mt-1 block truncate text-[11px] text-slate-600">{lead.contactName || 'Contact not added'}{lead.industry ? ` / ${lead.industry}` : ''}{lead.email ? ` / ${lead.email}` : ''}</span><span className="mt-1 block text-[10px] font-medium text-violet-700">View full prospect details</span></span></span>
       <span><span className="rounded-full bg-violet-100 px-3 py-1.5 text-[10px] font-semibold text-violet-900">{stageLabel(lead.stage)}</span></span>
       <span className="text-xs"><span className="block font-medium">{lead.ownerName || lead.ownerEmail || 'Unassigned'}</span><span className="mt-1 block text-[10px] text-slate-600">{lead.channel ? stageLabel(lead.channel) : 'No contact logged'}</span></span>
       <span className="text-xs sm:text-right"><span className="block font-semibold">{money(lead.advertiserSpend)}</span><span className="mt-1 block text-[10px] text-slate-600">{lead.stage === 'CAMPAIGN_SUCCESSFUL' ? `Commission ${money(Number(lead.advertiserSpend) * 0.1)}` : 'Deal value'}</span></span>
-    </button>)}</div> : <p className="p-12 text-center text-sm text-slate-600">Saved and researched leads will appear here. Click a lead to view its details.</p>}
+    </button>)}</div> : <p className="p-12 text-center text-sm text-slate-600">Saved and researched prospects will appear here. Click a prospect to view its details.</p>}
 
     <dialog ref={dialog} aria-labelledby="lead-details-title" onClose={() => setSelected(null)} onClick={(event) => { if (event.target === event.currentTarget) dialog.current?.close() }} className="m-auto max-h-[85dvh] w-[92vw] max-w-2xl overflow-y-auto rounded-2xl border-[1px] border-black/30 bg-white p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm">
       {selected && <div>
-        <header className="flex items-start justify-between gap-4 bg-violet-800 p-5 text-white sm:p-6"><div><p className="text-xs text-violet-100">Lead information</p><h2 id="lead-details-title" className="mt-1 break-words text-2xl font-bold">{selected.businessName}</h2><p className="mt-2 text-xs text-violet-100">{stageLabel(selected.stage)} / {selected.ownerName || selected.ownerEmail || 'Unassigned'}</p></div><button type="button" autoFocus onClick={() => dialog.current?.close()} aria-label="Close lead details" className="shrink-0 rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"><X className="size-5" /></button></header>
+        <header className="flex items-start justify-between gap-4 bg-violet-800 p-5 text-white sm:p-6"><div><p className="text-xs text-violet-100">Prospect information</p><h2 id="lead-details-title" className="mt-1 break-words text-2xl font-bold">{selected.businessName}</h2><p className="mt-2 text-xs text-violet-100">{stageLabel(selected.stage)} / {selected.ownerName || selected.ownerEmail || 'Unassigned'}</p></div><button type="button" autoFocus onClick={() => dialog.current?.close()} aria-label="Close prospect details" className="shrink-0 rounded-lg p-2 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"><X className="size-5" /></button></header>
         <div className="space-y-6 p-5 sm:p-6">
           <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
             <div><dt className="text-xs font-semibold text-slate-500">Contact person</dt><dd className="mt-1 break-words">{selected.contactName || 'Not provided'}</dd></div>

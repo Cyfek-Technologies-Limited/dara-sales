@@ -85,7 +85,7 @@ export function IndustryManager({
         throw new Error(result.error || "Could not add this industry.");
       setName("");
       setNotice(
-        `${result.industry.name} added. Add six categories so assigned interns can start recording leads.`
+        `${result.industry.name} added. Add six categories so assigned interns can start recording prospects.`
       );
       router.refresh();
     } catch (cause) {
@@ -161,7 +161,7 @@ export function IndustryManager({
         <h2 className="font-semibold">Industry catalog</h2>
         <p className="mt-1 text-sm text-[#657286]">
           Add industries, then create six subcategories under each one. Interns
-          choose from those categories when recording a new lead.
+          choose from those categories when recording a new prospect.
         </p>
         <form
           onSubmit={addIndustry}
@@ -276,7 +276,7 @@ export function IndustryManager({
                       <p className="mt-1 text-xs text-[#657286]">
                         {assigned.length} assigned{" "}
                         {assigned.length === 1 ? "intern" : "interns"} ·{" "}
-                        {industry.prospectCount} prospects ·{" "}
+                        {industry.prospectCount} leads ·{" "}
                         {industry.clientCount} clients
                       </p>
                     </div>
@@ -323,7 +323,7 @@ export function IndustryManager({
                             <th className="px-4 py-2.5">Subcategory</th>
                             <th className="px-4 py-2.5">Interns</th>
                             <th className="px-4 py-2.5">Reached today</th>
-                            <th className="px-4 py-2.5">Prospects</th>
+                            <th className="px-4 py-2.5">Leads</th>
                             <th className="px-4 py-2.5">Clients</th>
                           </tr>
                         </thead>
@@ -353,7 +353,7 @@ export function IndustryManager({
                   ) : (
                     <p className="mt-4 rounded-lg bg-[#f4f6f9] p-3 text-xs text-[#657286]">
                       Add six categories before interns in this industry can
-                      record new leads.
+                      record new prospects.
                     </p>
                   )}
                   {industry.categories.length > 0 &&
@@ -380,7 +380,7 @@ export function IndustryManager({
       <section className="rounded-2xl border-[1px] border-black/30 bg-white p-5 sm:p-6">
         <h2 className="font-semibold">Performance leaders</h2>
         <p className="mt-1 text-sm text-[#657286]">
-          Compare prospects by industry and subcategory, then check today&apos;s
+          Compare positive-response leads by industry and subcategory, then check today&apos;s
           reach.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -393,8 +393,8 @@ export function IndustryManager({
             </p>
             <p className="mt-1 text-xs text-[#657286]">
               {topIndustry
-                ? `${topIndustry.prospectCount} prospects · ${topIndustry.clientCount} clients`
-                : "Prospects will appear as interns update lead stages."}
+                ? `${topIndustry.prospectCount} leads · ${topIndustry.clientCount} clients`
+                : "Leads will appear when interns record positive responses."}
             </p>
           </article>
           <article className="rounded-xl bg-[#f4f6f9] p-4">
@@ -408,7 +408,7 @@ export function IndustryManager({
             </p>
             <p className="mt-1 text-xs text-[#657286]">
               {topCategory
-                ? `${topCategory.prospectCount} prospects · ${topCategory.clientCount} clients · ${topCategory.todayBusinesses} reached today`
+                ? `${topCategory.prospectCount} leads · ${topCategory.clientCount} clients · ${topCategory.todayBusinesses} reached today`
                 : "Subcategory results will appear here."}
             </p>
           </article>
@@ -421,7 +421,7 @@ export function IndustryManager({
                   <th className="px-4 py-3">Industry</th>
                   <th className="px-4 py-3">Subcategory</th>
                   <th className="px-4 py-3">Reached today</th>
-                  <th className="px-4 py-3">Prospects</th>
+                  <th className="px-4 py-3">Leads</th>
                   <th className="px-4 py-3">Clients</th>
                 </tr>
               </thead>

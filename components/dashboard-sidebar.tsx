@@ -11,7 +11,7 @@ type DashboardRole = 'ADMIN' | 'STAFF'
 
 const adminWorkspaceLinks = [
   { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { label: 'Leads', href: '/admin/leads', icon: ContactRound },
+  { label: 'Prospects', href: '/admin/leads', icon: ContactRound },
   { label: 'AI Prospecting', href: '/admin/prospecting', icon: Search },
   { label: 'Email outreach', href: '/admin/email-outreach', icon: Mail },
   { label: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
@@ -21,8 +21,8 @@ const adminWorkspaceLinks = [
 
 const staffWorkspaceLinks = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { label: "Today's leads", href: '/dashboard/leads', icon: ContactRound },
-  { label: 'All leads & prospects', href: '/dashboard/leads/all', icon: Users },
+  { label: "Today's prospects", href: '/dashboard/leads', icon: ContactRound },
+  { label: 'All prospects & leads', href: '/dashboard/leads/all', icon: Users },
   { label: 'Pipeline', href: '/dashboard#pipeline', icon: Target },
 ]
 

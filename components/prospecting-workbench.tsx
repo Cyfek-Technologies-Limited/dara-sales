@@ -108,17 +108,17 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
       const response = await fetch('/api/admin/prospecting/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...business, categoryId: saveCategoryId, ownerId: assignedOwnerId }), signal: AbortSignal.timeout(45000) })
       const data = await response.json().catch(() => ({}))
       if (response.status === 409) {
-        setLeadStatuses(current => ({ ...current, [key]: { kind: 'success', message: 'Already in your leads. Skipped duplicate.' } }))
+        setLeadStatuses(current => ({ ...current, [key]: { kind: 'success', message: 'Already in your prospects. Skipped duplicate.' } }))
         return 'existing'
       }
-      if (!response.ok) throw new Error(data.error || 'Could not save this lead.')
+      if (!response.ok) throw new Error(data.error || 'Could not save this prospect.')
       const teammate = teammates.find(item => item.id === data.ownerId)
-      setLeadStatuses(current => ({ ...current, [key]: { kind: 'success', message: data.ownerId ? `Added to ${teammate?.name || teammate?.email || 'your teammate'}'s leads.` : 'Saved to leads as unassigned.' } }))
+      setLeadStatuses(current => ({ ...current, [key]: { kind: 'success', message: data.ownerId ? `Added to ${teammate?.name || teammate?.email || 'your teammate'}'s prospects.` : 'Saved to prospects as unassigned.' } }))
       return 'saved'
     } catch (cause) {
       const message = cause instanceof Error && cause.name === 'TimeoutError'
-        ? 'Saving took too long. Check the leads page before trying again.'
-        : cause instanceof Error ? cause.message : 'Could not save this lead.'
+        ? 'Saving took too long. Check the prospects page before trying again.'
+        : cause instanceof Error ? cause.message : 'Could not save this prospect.'
       setLeadStatuses(current => ({ ...current, [key]: { kind: 'error', message } }))
       return 'failed'
     }
@@ -129,7 +129,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
     if (saveInFlight.current || leadStatuses[key]?.kind === 'success') return
     const saveCategoryId = resultContext?.categoryId || categoryId
     if (!saveCategoryId) {
-      setLeadStatuses(current => ({ ...current, [key]: { kind: 'error', message: 'Choose an industry category and search again before adding this lead.' } }))
+      setLeadStatuses(current => ({ ...current, [key]: { kind: 'error', message: 'Choose an industry category and search again before adding this prospect.' } }))
       return
     }
     saveInFlight.current = true
@@ -143,7 +143,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
   async function saveAllBusinesses() {
     if (saveInFlight.current || !remainingBusinesses.length) return
     const saveCategoryId = resultContext?.categoryId || categoryId
-    if (!saveCategoryId) { setError('Choose an industry category and search again before adding leads.'); return }
+    if (!saveCategoryId) { setError('Choose an industry category and search again before adding prospects.'); return }
     const targets = [...remainingBusinesses]
     const assignedOwnerId = selectedOwnerId
     const progress = { done: 0, total: targets.length, saved: 0, existing: 0, failed: 0 }
@@ -218,7 +218,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
               <option value="5">Up to 5 businesses</option><option value="8">Up to 8 businesses</option><option value="12">Up to 12 businesses</option>
             </select>
           </label>
-          <label className="text-[13px] font-semibold text-slate-800">Assign saved leads to (optional)
+          <label className="text-[13px] font-semibold text-slate-800">Assign saved prospects to (optional)
             <select value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} className={fieldClassName}>
               <option value="">Unassigned</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
             </select>
@@ -227,7 +227,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
             <button disabled={loading === 'search' || !offering.trim() || !location.trim() || !categoryId} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0b1f3a]/20 transition hover:bg-[#142e50] focus-visible:ring-4 focus-visible:ring-[#c9d8e8] disabled:cursor-not-allowed disabled:opacity-50">
               {loading === 'search' ? <LoaderCircle className="size-4 animate-spin" /> : <Search className="size-4" />}{loading === 'search' ? 'Finding businesses and checking contact pages...' : 'Find businesses'}
             </button>
-            <p className="mt-2 text-[11px] leading-5 text-[#475569]">These fields guide web research. More restrictive searches may return fewer results. Review each source before saving a lead.</p>
+            <p className="mt-2 text-[11px] leading-5 text-[#475569]">These fields guide web research. More restrictive searches may return fewer results. Review each source before saving a prospect.</p>
           </div>
         </fieldset>
       </form> : <div className="mt-4 rounded-xl bg-[#f4f6f9] p-4 text-xs leading-5 text-[#475569]">Add industries and categories before searching. <Link href="/admin/industries" className="font-semibold underline">Manage industries</Link></div>}
@@ -235,20 +235,20 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
       {businesses.length > 0 && <div className="mt-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h3 className="text-sm font-semibold">Review search results</h3><p className="mt-1 text-xs text-[#475569]">{selectedCategory ? selectedCategory.industryName + ' / ' + selectedCategory.name : 'Selected category'} / {resultContext?.location || location} / {businesses.length} possible businesses</p></div>
-          <div className="flex flex-wrap items-center gap-4"><Link href="/admin/leads" className="text-xs font-semibold text-[#173b65] underline">View leads</Link><button type="button" onClick={saveAllBusinesses} disabled={savingAll || Boolean(savingLeadKey) || Boolean(loading) || !remainingBusinesses.length} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{savingAll ? <LoaderCircle className="size-4 animate-spin" /> : !remainingBusinesses.length ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}{savingAll ? `Adding ${bulkProgress?.done || 0} of ${bulkProgress?.total || 0}...` : !remainingBusinesses.length ? 'All leads added' : `Add all leads (${remainingBusinesses.length})`}</button></div>
+          <div className="flex flex-wrap items-center gap-4"><Link href="/admin/leads" className="text-xs font-semibold text-[#173b65] underline">View prospects</Link><button type="button" onClick={saveAllBusinesses} disabled={savingAll || Boolean(savingLeadKey) || Boolean(loading) || !remainingBusinesses.length} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">{savingAll ? <LoaderCircle className="size-4 animate-spin" /> : !remainingBusinesses.length ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}{savingAll ? `Adding ${bulkProgress?.done || 0} of ${bulkProgress?.total || 0}...` : !remainingBusinesses.length ? 'All prospects added' : `Add all prospects (${remainingBusinesses.length})`}</button></div>
         </div>
         <div className="rounded-xl border-[1px] border-black/30 bg-[#edf2f7] p-4">
-          <label htmlFor="results-owner" className="block text-[13px] font-semibold text-slate-800">Assign these leads to (optional)</label>
+          <label htmlFor="results-owner" className="block text-[13px] font-semibold text-slate-800">Assign these prospects to (optional)</label>
           <select id="results-owner" value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} disabled={Boolean(savingLeadKey) || savingAll} aria-describedby="results-owner-help" className={fieldClassName}>
             <option value="">Unassigned</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
           </select>
-          <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{teammates.length ? 'Save leads as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Leads will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-[#173b65] underline">Manage team</Link></>}</p>
+          <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{teammates.length ? 'Save prospects as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Prospects will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-[#173b65] underline">Manage team</Link></>}</p>
         </div>
         {bulkProgress && <div role="status" className={`rounded-xl border p-4 text-sm ${bulkProgress.failed ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-emerald-300 bg-emerald-50 text-emerald-900'}`}>
-          <p className="font-semibold">{savingAll ? `Adding leads: ${bulkProgress.done} of ${bulkProgress.total} processed` : 'Bulk add finished'}</p>
+          <p className="font-semibold">{savingAll ? `Adding prospects: ${bulkProgress.done} of ${bulkProgress.total} processed` : 'Bulk add finished'}</p>
           <p className="mt-1">{bulkProgress.saved} added ? {bulkProgress.existing} already saved ? {bulkProgress.failed} could not be saved</p>
-          {savingAll && <div role="progressbar" aria-label="Adding leads" aria-valuemin={0} aria-valuemax={bulkProgress.total} aria-valuenow={bulkProgress.done} className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full bg-[#0b1f3a] transition-[width]" style={{ width: `${bulkProgress.done / bulkProgress.total * 100}%` }} /></div>}
-          {!savingAll && bulkProgress.failed > 0 && <p className="mt-2 text-xs">Review the errors beside each lead. Click Add all leads again to retry those that failed.</p>}
+          {savingAll && <div role="progressbar" aria-label="Adding prospects" aria-valuemin={0} aria-valuemax={bulkProgress.total} aria-valuenow={bulkProgress.done} className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full bg-[#0b1f3a] transition-[width]" style={{ width: `${bulkProgress.done / bulkProgress.total * 100}%` }} /></div>}
+          {!savingAll && bulkProgress.failed > 0 && <p className="mt-2 text-xs">Review the errors beside each prospect. Click Add all prospects again to retry those that failed.</p>}
         </div>}
         <p className="text-xs leading-5 text-slate-500">Work contacts are shown only when publicly listed on an official company page. Company inboxes and main phone numbers may be used when direct work contacts are unavailable.</p>
         <div className="overflow-x-auto rounded-xl border-[1px] border-black/30 bg-white"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr>{['Company','Email','Phone','Sources / save'].map(title => <th key={title} className="whitespace-nowrap px-4 py-3">{title}</th>)}</tr></thead><tbody>
@@ -263,7 +263,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
             <td className="whitespace-nowrap px-4 py-4">{business.publicPhone ? <a href={'tel:' + business.publicPhone} className="text-[#173b65] hover:underline">{business.publicPhone}</a> : <span title={business.contactLookupMessage}>{business.contactLookupStatus === 'UNAVAILABLE' ? 'Lookup unavailable' : 'Not found on checked pages'}</span>}</td>
             <td className="min-w-48 space-y-2 px-4 py-4"><div className="flex flex-wrap gap-3 text-xs"><a href={business.website} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Website</a><a href={business.sourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Business source</a>{business.emailSourceUrl && <a href={business.emailSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Email source</a>}{business.phoneSourceUrl && <a href={business.phoneSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Phone source</a>}{!business.emailSourceUrl && !business.phoneSourceUrl && business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Contact source</a>}{business.personSourceUrl && <a href={business.personSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Person source</a>}</div>
               {!business.publicEmail && !business.publicPhone && business.contactLookupMessage && <p className="text-xs leading-5 text-amber-800">{business.contactLookupMessage}</p>}
-              <button type="button" disabled={Boolean(savingLeadKey) || savingAll || isSaved} onClick={() => saveBusiness(business)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">{isSaving ? <LoaderCircle className="size-4 animate-spin" /> : isSaved ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}{isSaving ? 'Saving...' : isSaved ? 'Saved to leads' : 'Add to leads'}</button>
+              <button type="button" disabled={Boolean(savingLeadKey) || savingAll || isSaved} onClick={() => saveBusiness(business)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">{isSaving ? <LoaderCircle className="size-4 animate-spin" /> : isSaved ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}{isSaving ? 'Saving...' : isSaved ? 'Saved to prospects' : 'Add to prospects'}</button>
               {status && <p role={status.kind === 'error' ? 'alert' : 'status'} className={`text-xs leading-5 ${status.kind === 'error' ? 'text-red-700' : 'text-emerald-700'}`}>{status.message}</p>}
             </td>
           </tr>

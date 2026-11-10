@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const saved = cleanProspectingDraft((await client.query('SELECT "form" FROM "ProspectingPreference" WHERE "organizationId" = $1 AND "authUserId" = $2', [admin.organization.id, admin.user.id])).rows[0]?.form)
     const description = (typeof body.businessDescription === 'string' ? body.businessDescription : saved.offering || saved.businessInput).trim()
     if (!description || /^(https?:\/\/|www\.)\S+$/i.test(description) || /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(description)) return NextResponse.json({ error: 'Describe what your business offers, or analyze your website in AI Prospecting first so we can use its business summary.' }, { status: 400 })
-    let audience = 'Potential business customers across the organization’s saved lead industries. Keep the email broadly relevant; do not assume a specific industry.'
+    let audience = 'Potential business customers across the organization’s saved prospect industries. Keep the email broadly relevant; do not assume a specific industry.'
     if (industryId) {
       const industry = (await client.query('SELECT "name" FROM "Industry" WHERE "id" = $1 AND "organizationId" = $2', [industryId, admin.organization.id])).rows[0]
       if (!industry) return NextResponse.json({ error: 'Choose an industry in your workspace.' }, { status: 400 })
