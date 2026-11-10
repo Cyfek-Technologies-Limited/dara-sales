@@ -27,6 +27,7 @@ export default function EmailOutreachManager() {
   const [approved, setApproved] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [generationError, setGenerationError] = useState('')
   const [businessDescription, setBusinessDescription] = useState('')
   const [draft, setDraft] = useState<{ subject: string; message: string } | null>(null)
   const [mailbox, setMailbox] = useState({ senderName: '', email: '', host: '', port: '587', password: '' })
@@ -48,16 +49,19 @@ export default function EmailOutreachManager() {
   }, [load])
 
   async function generateEmail() {
-    setGenerating(true); setError(''); setMessage(''); setDraft(null)
+    if (generating) return
+    setGenerating(true); setGenerationError(''); setError(''); setMessage(''); setDraft(null)
     try {
       const response = await fetch('/api/admin/email-outreach/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ businessDescription, industryId: profile.industryId }), signal: AbortSignal.timeout(55000),
       })
-      const result = await response.json()
+      const result = await response.json().catch(() => null)
+      if (!result) throw new Error('The generation service returned an unreadable response. Please try again.')
       if (!response.ok) throw new Error(result.error || 'Could not generate your email.')
+      if (typeof result.subject !== 'string' || !result.subject.trim() || typeof result.message !== 'string' || !result.message.trim()) throw new Error('The AI response did not include a complete email. Please try again.')
       setDraft({ subject: result.subject, message: result.message })
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not generate your email.') }
+    } catch (cause) { setGenerationError(cause instanceof Error && (cause.name === 'TimeoutError' || cause.name === 'AbortError') ? 'Email generation timed out. Your description is still here; please try again.' : cause instanceof Error ? cause.message : 'Could not generate your email.') }
     finally { setGenerating(false) }
   }
 
@@ -133,6 +137,8 @@ export default function EmailOutreachManager() {
           <label className="mt-3 block text-sm font-semibold">What does your business offer?<textarea maxLength={2000} value={businessDescription} onChange={event => { setBusinessDescription(event.target.value); setDraft(null) }} placeholder="For example: We supply air compressors for industrial equipment, or help brands promote their products through advertising." className={`${field} min-h-24`} /></label>
           <p className="mt-2 text-xs leading-5 text-slate-600">We use your saved AI Prospecting description when available. You can refine it here for this draft. If you only have a website URL, analyze it in AI Prospecting first.</p>
           <button type="button" disabled={!data || !businessDescription.trim() || generating} onClick={generateEmail} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"><PenLine className="size-4" />{generating ? 'Writing your email...' : draft ? 'Generate another draft' : 'Generate subject and email'}</button>
+          {generating && <p role="status" className="mt-3 flex items-center gap-2 text-sm text-[#173b65]"><LoaderCircle className="size-4 animate-spin" />Writing your subject and message. This may take up to a minute.</p>}
+          {generationError && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{generationError}</p>}
           {draft && <div className="mt-4 rounded-xl border border-slate-300 bg-white p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">AI draft preview</p>
             <h4 className="mt-2 font-semibold">{draft.subject}</h4>
