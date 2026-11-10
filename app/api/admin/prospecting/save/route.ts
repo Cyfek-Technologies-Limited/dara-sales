@@ -46,7 +46,10 @@ export async function POST(request: Request) {
   const contactName = personSourceValid && typeof body.contactName === 'string' ? body.contactName.trim().slice(0, 160) : null
   const contactJobTitle = contactName && typeof body.contactJobTitle === 'string' ? body.contactJobTitle.trim().slice(0, 160) : null
   const teamSourceUrl = validWebUrl(body.targetTeamSourceUrl)
-  const teamSourceValid = teamSourceUrl && website && sameBusinessWebsite(teamSourceUrl, website)
+  const groupInbox = body.inboxScope === 'GROUP' && !contactName && !phone && Boolean(email && website && teamSourceUrl
+    && teamSourceUrl === emailSourceUrl && sameBusinessWebsite(website, teamSourceUrl)
+    && email.split('@')[1].toLowerCase() === new URL(teamSourceUrl).hostname.toLowerCase().replace(/^www\./, ''))
+  const teamSourceValid = teamSourceUrl && website && (groupInbox || sameBusinessWebsite(teamSourceUrl, website))
   const contactDepartment = (contactName || teamSourceValid) && typeof body.contactDepartment === 'string' ? body.contactDepartment.trim().slice(0, 100) : null
   const requestedOwnerId = typeof body.ownerId === 'string' ? body.ownerId.trim() : ''
   const categoryId = typeof body.categoryId === 'string' ? body.categoryId : ''
@@ -63,7 +66,7 @@ export async function POST(request: Request) {
   )).rows[0] : null
   const ownerId = owner?.authUserId || null
   if (!category) return NextResponse.json({ error: 'Choose a valid industry category.' }, { status: 400 })
-  if (email && (!emailSourceUrl || !sameBusinessWebsite(emailSourceUrl, website!)) || phone && (!phoneSourceUrl || !sameBusinessWebsite(phoneSourceUrl, website!))) {
+  if (email && !groupInbox && (!emailSourceUrl || !sameBusinessWebsite(emailSourceUrl, website!)) || phone && (!phoneSourceUrl || !sameBusinessWebsite(phoneSourceUrl, website!))) {
     return NextResponse.json({ error: 'Contact details need a source page on the business website.' }, { status: 400 })
   }
 
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
   if (duplicate) return NextResponse.json({ error: 'This business is already in your prospect pipeline.' }, { status: 409 })
 
   const leadId = crypto.randomUUID()
-  const teamSource = teamSourceValid && contactDepartment ? ` | Team source: ${teamSourceUrl}` : ''
+  const teamSource = teamSourceValid && contactDepartment ? ` | ${groupInbox ? 'Group inbox' : body.inboxScope === 'DEPARTMENT' ? 'Department inbox' : 'Team'} source: ${teamSourceUrl}` : ''
   try {
     await prepareEmailAutomation(admin.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))
     await pool.query(

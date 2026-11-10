@@ -255,7 +255,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
           {savingAll && <div role="progressbar" aria-label="Adding prospects" aria-valuemin={0} aria-valuemax={bulkProgress.total} aria-valuenow={bulkProgress.done} className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full bg-[#0b1f3a] transition-[width]" style={{ width: `${bulkProgress.done / bulkProgress.total * 100}%` }} /></div>}
           {!savingAll && bulkProgress.failed > 0 && <p className="mt-2 text-xs">Review the errors beside each prospect. Click Add all prospects again to retry those that failed.</p>}
         </div>}
-        <p className="text-xs leading-5 text-slate-500">{resultContext?.targetContact ? <>Target: <strong>{resultContext.targetContact}</strong>. Email and phone are shown only when published for the matching person or team.</> : 'Contact details come from official company pages and may include general inboxes or main phone numbers.'}</p>
+        <p className="text-xs leading-5 text-slate-500">{resultContext?.targetContact ? <>Target: <strong>{resultContext.targetContact}</strong>. When no direct details are found, Dara looks for an official procurement or supplier inbox.</> : 'Contact details come from official company pages and may include general inboxes or main phone numbers.'}</p>
         <div className="overflow-x-auto rounded-xl border-[1px] border-black/30 bg-white"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr>{['Company','Email','Phone','Sources / save'].map(title => <th key={title} className="whitespace-nowrap px-4 py-3">{title}</th>)}</tr></thead><tbody>
         {businesses.map((business) => {
           const key = business.businessName + ':' + business.website
@@ -270,7 +270,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
               {resultContext?.targetContact && <div className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-xs leading-5">
                 {business.contactName ? <><strong>{business.contactName}</strong><p>{[business.contactJobTitle, business.contactDepartment].filter(Boolean).join(' · ')}</p></>
                   : 'targetTeamSourceUrl' in business && typeof business.targetTeamSourceUrl === 'string' && business.targetTeamSourceUrl
-                    ? <a href={business.targetTeamSourceUrl} target="_blank" rel="noreferrer" className="font-semibold text-[#173b65] underline">{business.contactDepartment} (team source)</a>
+                    ? <a href={business.targetTeamSourceUrl} target="_blank" rel="noreferrer" className="font-semibold text-[#173b65] underline">{business.contactDepartment} ({'inboxScope' in business && business.inboxScope === 'GROUP' ? 'group inbox' : business.publicEmail ? 'department inbox' : 'team source'})</a>
                     : 'No matching person or team found'}
               </div>}
             </td>
