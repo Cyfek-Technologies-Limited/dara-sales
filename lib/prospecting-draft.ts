@@ -7,6 +7,7 @@ export type ProspectingDraft = {
   keywords: string
   businessSize: string
   contactPreference: string
+  targetContact: string
   exclusions: string
   resultLimit: string
   ownerId: string
@@ -14,7 +15,7 @@ export type ProspectingDraft = {
 
 export const emptyProspectingDraft: ProspectingDraft = {
   businessInput: '', websiteUrl: '', offering: '', location: '', categoryId: '', keywords: '', businessSize: 'ANY',
-  contactPreference: 'ANY', exclusions: '', resultLimit: '8', ownerId: '',
+  contactPreference: 'ANY', targetContact: '', exclusions: '', resultLimit: '8', ownerId: '',
 }
 
 export function cleanProspectingDraft(value: unknown): ProspectingDraft {
@@ -28,6 +29,7 @@ export function cleanProspectingDraft(value: unknown): ProspectingDraft {
     keywords: text('keywords', 300), exclusions: text('exclusions', 300), ownerId: text('ownerId', 160),
     businessSize: choice('businessSize', ['ANY', 'SMALL', 'MEDIUM', 'LARGE'], 'ANY'),
     contactPreference: choice('contactPreference', ['ANY', 'EMAIL', 'PHONE', 'BOTH'], 'ANY'),
+    targetContact: text('targetContact', 120),
     resultLimit: choice('resultLimit', ['5', '8', '12'], '8'),
   }
 }

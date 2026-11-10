@@ -30,7 +30,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
   const setOwnerId = (value: string) => update('ownerId', value)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [businesses, setBusinesses] = useState<Business[]>([])
-  const [resultContext, setResultContext] = useState<{ categoryId: string; location: string } | null>(null)
+  const [resultContext, setResultContext] = useState<{ categoryId: string; location: string; targetContact: string } | null>(null)
   const [loading, setLoading] = useState('')
   const [savingName, setSavingName] = useState('')
   const [savingLeadKey, setSavingLeadKey] = useState('')
@@ -90,13 +90,14 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
     if (loading || saveInFlight.current) return
     setLoading('search'); setError(''); setMessage(''); setBusinesses([]); setLeadStatuses({}); setBulkProgress(null)
     try {
-      const response = await fetch('/api/admin/prospecting/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ offering, location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit: Number(resultLimit) }), signal: AbortSignal.timeout(115000) })
+      const targetContact = form.targetContact?.trim() || ''
+      const response = await fetch('/api/admin/prospecting/search', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ offering, location, categoryId, keywords, businessSize, contactPreference, targetContact, exclusions, resultLimit: Number(resultLimit) }), signal: AbortSignal.timeout(115000) })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Could not search for businesses.')
       setBusinesses(data.businesses || [])
-      setResultContext({ categoryId, location })
+      setResultContext({ categoryId, location, targetContact })
       if (!data.businesses?.length) setMessage(data.contactCandidatesChecked ? 'Businesses were researched, but their available contacts did not meet your selected requirements. Try fewer contact requirements or another category.' : 'No sourced potential buyers matched this search. Sellers and suppliers of your offering are excluded. Try a broader location or another customer category.')
-      else setMessage(`${data.businesses.length} businesses found. Published contacts were checked on their websites and contact pages.`)
+      else setMessage(targetContact ? `${data.businesses.length} businesses found. Looked for ${targetContact} contacts on official company pages.` : `${data.businesses.length} businesses found. Published contacts were checked on their websites and contact pages.`)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not search for businesses.') }
     finally { setLoading('') }
   }
@@ -199,6 +200,10 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
             <input maxLength={300} value={keywords} onChange={(event) => setKeywords(event.target.value)} placeholder="For example: food manufacturers, factories, packaging plants" className={fieldClassName} />
             <span className="mt-1 block text-[11px] font-normal text-[#475569]">Add products, services, specialities, or types of business to prioritise.</span>
           </label>
+          <label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">Who do you want to reach? <span className="font-normal text-[#475569]">(optional)</span>
+            <input maxLength={120} value={form.targetContact ?? ''} onChange={(event) => update('targetContact', event.target.value)} placeholder="For example: procurement manager, maintenance team, or business development" className={fieldClassName} />
+            <span className="mt-1 block text-[11px] font-normal text-[#475569]">Enter a role or team to look for publicly listed work contacts. Leave blank to include general company contacts.</span>
+          </label>
           <label className="text-[13px] font-semibold text-slate-800">Preferred business size
             <select value={businessSize} onChange={(event) => setBusinessSize(event.target.value)} className={fieldClassName}>
               <option value="ANY">Any size</option><option value="SMALL">Small businesses (1-50 employees)</option><option value="MEDIUM">Medium businesses (51-250 employees)</option><option value="LARGE">Large businesses (251+ employees)</option>
@@ -207,7 +212,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
           </label>
           <label className="text-[13px] font-semibold text-slate-800">Contact details required
             <select value={contactPreference} onChange={(event) => setContactPreference(event.target.value)} className={fieldClassName}>
-              <option value="ANY">Any business, with or without contacts</option><option value="EMAIL">Public business email</option><option value="PHONE">Public business phone</option><option value="BOTH">Both email and phone</option>
+              <option value="ANY">Any business, with or without contacts</option><option value="EMAIL">{form.targetContact.trim() ? 'Email for the matching person or team' : 'Public business email'}</option><option value="PHONE">{form.targetContact.trim() ? 'Phone for the matching person or team' : 'Public business phone'}</option><option value="BOTH">Both email and phone</option>
             </select>
           </label>
           <label className="text-[13px] font-semibold text-slate-800 sm:col-span-2">Exclude businesses or keywords <span className="font-normal text-[#475569]">(optional)</span>
@@ -250,7 +255,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
           {savingAll && <div role="progressbar" aria-label="Adding prospects" aria-valuemin={0} aria-valuemax={bulkProgress.total} aria-valuenow={bulkProgress.done} className="mt-3 h-2 overflow-hidden rounded-full bg-white"><div className="h-full bg-[#0b1f3a] transition-[width]" style={{ width: `${bulkProgress.done / bulkProgress.total * 100}%` }} /></div>}
           {!savingAll && bulkProgress.failed > 0 && <p className="mt-2 text-xs">Review the errors beside each prospect. Click Add all prospects again to retry those that failed.</p>}
         </div>}
-        <p className="text-xs leading-5 text-slate-500">Work contacts are shown only when publicly listed on an official company page. Company inboxes and main phone numbers may be used when direct work contacts are unavailable.</p>
+        <p className="text-xs leading-5 text-slate-500">{resultContext?.targetContact ? <>Target: <strong>{resultContext.targetContact}</strong>. Email and phone are shown only when published for the matching person or team.</> : 'Contact details come from official company pages and may include general inboxes or main phone numbers.'}</p>
         <div className="overflow-x-auto rounded-xl border-[1px] border-black/30 bg-white"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr>{['Company','Email','Phone','Sources / save'].map(title => <th key={title} className="whitespace-nowrap px-4 py-3">{title}</th>)}</tr></thead><tbody>
         {businesses.map((business) => {
           const key = business.businessName + ':' + business.website
@@ -258,7 +263,17 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
           const isSaving = savingLeadKey === key
           const isSaved = status?.kind === 'success'
           return <tr key={key} className="border-t border-black/10 align-top hover:bg-slate-50">
-            <td className="min-w-64 px-4 py-4"><h4 className="font-semibold">{business.businessName}</h4><p className="mt-1 text-xs leading-5 text-slate-600">{business.summary}</p>{business.buyerReason && <p className="mt-2 text-xs leading-5 text-[#173b65]"><strong>Customer fit: </strong>{business.buyerReason}</p>}</td>
+            <td className="min-w-64 px-4 py-4">
+              <h4 className="font-semibold">{business.businessName}</h4>
+              <p className="mt-1 text-xs leading-5 text-slate-600">{business.summary}</p>
+              {business.buyerReason && <p className="mt-2 text-xs leading-5 text-[#173b65]"><strong>Customer fit: </strong>{business.buyerReason}</p>}
+              {resultContext?.targetContact && <div className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-xs leading-5">
+                {business.contactName ? <><strong>{business.contactName}</strong><p>{[business.contactJobTitle, business.contactDepartment].filter(Boolean).join(' · ')}</p></>
+                  : 'targetTeamSourceUrl' in business && typeof business.targetTeamSourceUrl === 'string' && business.targetTeamSourceUrl
+                    ? <a href={business.targetTeamSourceUrl} target="_blank" rel="noreferrer" className="font-semibold text-[#173b65] underline">{business.contactDepartment} (team source)</a>
+                    : 'No matching person or team found'}
+              </div>}
+            </td>
             <td className="px-4 py-4">{business.publicEmail ? <a href={'mailto:' + business.publicEmail} className="text-[#173b65] hover:underline">{business.publicEmail}</a> : <span title={business.contactLookupMessage}>{business.contactLookupStatus === 'UNAVAILABLE' ? 'Lookup unavailable' : 'Not found on checked pages'}</span>}</td>
             <td className="whitespace-nowrap px-4 py-4">{business.publicPhone ? <a href={'tel:' + business.publicPhone} className="text-[#173b65] hover:underline">{business.publicPhone}</a> : <span title={business.contactLookupMessage}>{business.contactLookupStatus === 'UNAVAILABLE' ? 'Lookup unavailable' : 'Not found on checked pages'}</span>}</td>
             <td className="min-w-48 space-y-2 px-4 py-4"><div className="flex flex-wrap gap-3 text-xs"><a href={business.website} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Website</a><a href={business.sourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Business source</a>{business.emailSourceUrl && <a href={business.emailSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Email source</a>}{business.phoneSourceUrl && <a href={business.phoneSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Phone source</a>}{!business.emailSourceUrl && !business.phoneSourceUrl && business.contactSourceUrl && <a href={business.contactSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Contact source</a>}{business.personSourceUrl && <a href={business.personSourceUrl} target="_blank" rel="noreferrer" className="text-[#173b65] underline">Person source</a>}</div>

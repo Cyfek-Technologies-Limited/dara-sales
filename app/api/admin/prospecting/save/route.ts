@@ -45,7 +45,9 @@ export async function POST(request: Request) {
   const personSourceValid = personSourceUrl && website && new URL(personSourceUrl).hostname.toLowerCase().replace(/^www\./, '') === new URL(website).hostname.toLowerCase().replace(/^www\./, '')
   const contactName = personSourceValid && typeof body.contactName === 'string' ? body.contactName.trim().slice(0, 160) : null
   const contactJobTitle = contactName && typeof body.contactJobTitle === 'string' ? body.contactJobTitle.trim().slice(0, 160) : null
-  const contactDepartment = contactName && typeof body.contactDepartment === 'string' ? body.contactDepartment.trim().slice(0, 100) : null
+  const teamSourceUrl = validWebUrl(body.targetTeamSourceUrl)
+  const teamSourceValid = teamSourceUrl && website && sameBusinessWebsite(teamSourceUrl, website)
+  const contactDepartment = (contactName || teamSourceValid) && typeof body.contactDepartment === 'string' ? body.contactDepartment.trim().slice(0, 100) : null
   const requestedOwnerId = typeof body.ownerId === 'string' ? body.ownerId.trim() : ''
   const categoryId = typeof body.categoryId === 'string' ? body.categoryId : ''
   if (!businessName || !website || !sourceUrl || !categoryId) return NextResponse.json({ error: 'Business, website, source link, and category are required.' }, { status: 400 })
@@ -73,12 +75,13 @@ export async function POST(request: Request) {
   if (duplicate) return NextResponse.json({ error: 'This business is already in your prospect pipeline.' }, { status: 409 })
 
   const leadId = crypto.randomUUID()
+  const teamSource = teamSourceValid && contactDepartment ? ` | Team source: ${teamSourceUrl}` : ''
   try {
     await prepareEmailAutomation(admin.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))
     await pool.query(
       `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "contactName", "contactJobTitle", "contactDepartment", "updatedAt")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())`,
-      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${email && emailSourceUrl ? ` | Email source: ${emailSourceUrl}` : ''}${phone && phoneSourceUrl ? ` | Phone source: ${phoneSourceUrl}` : ''}${personSourceValid && contactName ? ` | Person source: ${personSourceUrl}` : ''}`, summary, contactName, contactJobTitle, contactDepartment],
+      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${email && emailSourceUrl ? ` | Email source: ${emailSourceUrl}` : ''}${phone && phoneSourceUrl ? ` | Phone source: ${phoneSourceUrl}` : ''}${personSourceValid && contactName ? ` | Person source: ${personSourceUrl}` : ''}${teamSource}`, summary, contactName, contactJobTitle, contactDepartment],
     )
     after(() => processEmailQueue(admin.organizationId).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, id: leadId, ownerId }, { status: 201 })
