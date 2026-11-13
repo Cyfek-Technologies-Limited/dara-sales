@@ -43,7 +43,7 @@ function webUrl(value: string | null) {
   } catch { return null }
 }
 
-export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
+export default function AdminLeadsList({ leads, emptyMessage = 'Saved and researched prospects will appear here. Click a prospect to view its details.' }: { leads: AdminLead[]; emptyMessage?: string }) {
   const router = useRouter()
   const [removedIds, setRemovedIds] = useState<string[]>([])
   const visibleLeads = leads.filter(lead => !removedIds.includes(lead.id))
@@ -86,7 +86,7 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
       <span><span className="rounded-full bg-violet-100 px-3 py-1.5 text-[10px] font-semibold text-violet-900">{contactLabel(lead.contactStatus)}</span></span>
       <span className="text-xs"><span className="block font-medium">{lead.ownerName || lead.ownerEmail || 'Unassigned'}</span><span className="mt-1 block text-[10px] text-slate-600">{lead.channel ? stageLabel(lead.channel) : 'No contact logged'}</span></span>
       <ProspectStatusEditor key={`${lead.id}:${lead.contactStatus}:${lead.responseText || ""}`} id={lead.id} businessName={lead.businessName} initialStatus={lead.contactStatus} initialResponse={lead.responseText} action={<RemoveProspectButton id={lead.id} businessName={lead.businessName} onRemoved={() => prospectRemoved(lead.id)} />} />
-    </div>)}</div> : <p className="p-12 text-center text-sm text-slate-600">Saved and researched prospects will appear here. Click a prospect to view its details.</p>}
+    </div>)}</div> : <p className="p-12 text-center text-sm text-slate-600">{emptyMessage}</p>}
 
     <dialog ref={dialog} aria-labelledby="lead-details-title" onClose={() => setSelected(null)} onClick={(event) => { if (event.target === event.currentTarget) dialog.current?.close() }} className="m-auto max-h-[85dvh] w-[92vw] max-w-2xl overflow-y-auto rounded-2xl border-[1px] border-black/30 bg-white p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm">
       {selected && <div>
