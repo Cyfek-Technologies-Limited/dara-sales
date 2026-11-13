@@ -13,8 +13,9 @@ export async function activateOrganizationCampaign(organizationId: string, appro
     FROM "OrganizationEmailSender" s WHERE a."organizationId" = $1 AND s."id" = a."senderId"
     AND s."organizationId" = a."organizationId" AND s."smtpPassword" IS NOT NULL
     AND a."enabled" = FALSE AND a."subject" = $3 AND a."message" = $4 AND a."companyAddress" = $5
-    AND a."senderId" = $6 AND a."industryId" IS NOT DISTINCT FROM $7 RETURNING a."campaignId"`,
-    [organizationId, `smtp:${randomUUID()}`, String(approved.subject).trim(), String(approved.message).trim(), String(approved.companyAddress).trim(), approved.senderId, approved.industryId || null])
+    AND a."senderId" = $6 AND a."industryId" IS NOT DISTINCT FROM $7
+    AND (SELECT COALESCE(jsonb_agg(f->>'id' ORDER BY position), '[]'::jsonb) FROM jsonb_array_elements(a."attachments") WITH ORDINALITY AS files(f, position)) = $8::jsonb RETURNING a."campaignId"`,
+    [organizationId, `smtp:${randomUUID()}`, String(approved.subject).trim(), String(approved.message).trim(), String(approved.companyAddress).trim(), approved.senderId, approved.industryId || null, JSON.stringify(approved.attachmentIds || [])])
   if (!result.rows.length) throw new SmtpError('Save your message and connect an SMTP business mailbox first.')
   await pool.query(`UPDATE "EmailSyncJob" SET "status" = 'CANCELLED', "updatedAt" = NOW()
     WHERE "organizationId" = $1 AND "campaignId" <> $2 AND "status" IN ('QUEUED','FAILED')`, [organizationId, result.rows[0].campaignId])

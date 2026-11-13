@@ -5,11 +5,13 @@ import { Mail, PenLine, LoaderCircle } from 'lucide-react'
 import OutreachLiveMonitor from '@/components/outreach-live-monitor'
 import OutreachContactDirectory from '@/components/outreach-contact-directory'
 
+type Attachment = { id?: string; name: string; type: string; size: number; content?: string }
+
 type Data = {
   businessDescription: string
   mailboxConnectionAvailable: boolean
   automation: { configured: boolean; enabled: boolean }
-  profile: { enabled: boolean; subject: string; message: string; companyAddress: string; industryId: string | null; senderId: string | null } | null
+  profile: { attachments: Attachment[]; enabled: boolean; subject: string; message: string; companyAddress: string; industryId: string | null; senderId: string | null } | null
   senders: { id: string; email: string }[]
   industries: { id: string; name: string }[]
   counts: { status: string; count: number }[]
@@ -24,6 +26,9 @@ export default function EmailOutreachManager() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [profile, setProfile] = useState({ subject: '', message: '', companyAddress: '', industryId: '', senderId: '' })
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [readingFiles, setReadingFiles] = useState(false)
+  const [attachmentError, setAttachmentError] = useState('')
   const [approved, setApproved] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -37,6 +42,7 @@ export default function EmailOutreachManager() {
     const result = await response.json()
     if (!response.ok) throw new Error(result.error || 'Could not load outreach activity.')
     setData(result)
+    if (initialize) setAttachments(result.profile?.attachments || [])
     if (initialize) setBusinessDescription(result.businessDescription || '')
     if (initialize) setProfile({ subject: result.profile?.subject || '', message: result.profile?.message || '', companyAddress: result.profile?.companyAddress || '', industryId: result.profile?.industryId || '', senderId: result.profile?.senderId || '' })
   }, [])
@@ -89,12 +95,29 @@ export default function EmailOutreachManager() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not retry these contacts.') }
     finally { setBusy(false); setPendingAction('') }
   }
+  async function addAttachments(files: File[]) {
+    setAttachmentError(''); setApproved(false)
+    if (attachments.length + files.length > 3 || attachments.reduce((sum, file) => sum + file.size, 0) + files.reduce((sum, file) => sum + file.size, 0) > 2 * 1024 * 1024) { setAttachmentError('Choose up to 3 files, no more than 2 MB in total.'); return }
+    if (files.some(file => !/\.(pdf|png|jpe?g|txt)$/i.test(file.name) || !file.size)) { setAttachmentError('Choose a non-empty PDF, PNG, JPG, or TXT file.'); return }
+    setReadingFiles(true)
+    try {
+      const added = await Promise.all(files.map(file => new Promise<Attachment>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onerror = () => reject(new Error('Could not read an attachment. Please try again.'))
+        reader.onload = () => resolve({ name: file.name, type: file.type, size: file.size, content: String(reader.result).split(',')[1] })
+        reader.readAsDataURL(file)
+      })))
+      setAttachments(current => [...current, ...added])
+    } catch (cause) { setAttachmentError(cause instanceof Error ? cause.message : 'Could not read attachment.') }
+    finally { setReadingFiles(false) }
+  }
+
   async function updateOutreach(action: 'save' | 'activate' | 'pause') {
     if (generating) return
     setBusy(true); setPendingAction(action); setError(''); setMessage('')
     if (action === 'activate') document.getElementById('live-outreach')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     try {
-      const response = await fetch('/api/admin/email-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...profile, action, confirmed: approved }), signal: AbortSignal.timeout(115000) })
+      const response = await fetch('/api/admin/email-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...profile, attachments, action, confirmed: approved }), signal: AbortSignal.timeout(115000) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not update your outreach.')
       setMessage(result.message); setApproved(false); setActivityVersion(value => value + 1)
@@ -128,7 +151,7 @@ export default function EmailOutreachManager() {
     </section>
     <form onSubmit={saveMessage} className="space-y-4 rounded-2xl border-[1px] border-black/30 bg-white p-6">
       <h2 className="text-lg font-bold">Your message and audience</h2><p className="text-sm leading-6 text-slate-600">Choose who your organization wants to reach and approve its own email. Dara sends through your connected business mailbox automatically.</p>
-      <fieldset disabled={busy || generating || Boolean(data?.profile?.enabled)} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
+      <fieldset disabled={busy || generating || readingFiles || Boolean(data?.profile?.enabled)} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
         <label className="text-sm font-semibold">Send from<select value={profile.senderId} onChange={event => { setProfile({ ...profile, senderId: event.target.value }); setApproved(false) }} className={field}><option value="">Choose your connected business email</option>{data?.senders.map(sender => <option key={sender.id} value={sender.id}>{sender.email}</option>)}</select>{data && !data.senders.length && <span className="mt-2 block text-xs font-normal leading-5 text-amber-800">No business mailbox is connected to this organization yet. You can save your message now; a verified mailbox connection is required before sending.</span>}</label>
         <label className="text-sm font-semibold">Target industry<select value={profile.industryId} onChange={event => { setProfile({ ...profile, industryId: event.target.value }); setApproved(false); setDraft(null) }} className={field}><option value="">All my saved prospect industries</option>{data?.industries.map(industry => <option key={industry.id} value={industry.id}>{industry.name}</option>)}</select></label>
         <section className="rounded-xl border-[1px] border-black/30 bg-slate-50 p-4 sm:col-span-2">
@@ -151,7 +174,15 @@ export default function EmailOutreachManager() {
         <label className="text-sm font-semibold sm:col-span-2">Your email message<textarea required maxLength={10000} value={profile.message} onChange={event => { setProfile({ ...profile, message: event.target.value }); setApproved(false) }} placeholder="Describe how your business can help this audience and what you would like them to do next." className={`${field} min-h-48`} /><span className="mt-2 block text-xs font-normal leading-5 text-slate-600">Use {'{{company_name}}'} for the recipient business. Dara adds your organization name, address, and unsubscribe option.</span></label>
         <label className="text-sm font-semibold sm:col-span-2">Your company address<input required maxLength={500} value={profile.companyAddress} onChange={event => { setProfile({ ...profile, companyAddress: event.target.value }); setApproved(false) }} className={field} /></label>
       </fieldset>
-      {data?.profile?.enabled ? <button type="button" disabled={busy} onClick={() => updateOutreach('pause')} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Pause my outreach to edit</button> : <><button disabled={busy || generating || !data} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Save my message</button><label className="flex items-start gap-3 text-sm leading-6"><input type="checkbox" disabled={generating || busy} checked={approved} onChange={event => setApproved(event.target.checked)} className="mt-1 size-4 accent-[#0b1f3a]" /><span>I approve this message and audience for my organization. Matching saved prospects may receive this email automatically.</span></label><button type="button" disabled={busy || generating || !approved || !profile.senderId || !profile.subject.trim() || !profile.message.trim() || !profile.companyAddress.trim()} onClick={() => updateOutreach('activate')} className="rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy && <LoaderCircle className="mr-2 inline size-4 animate-spin" />}{pendingAction === 'activate' ? 'Preparing and starting emails...' : busy ? 'Updating outreach...' : 'Start sending emails'}</button></>}
+      <fieldset disabled={busy || readingFiles || Boolean(data?.profile?.enabled)} className="rounded-xl border border-black/20 p-4 disabled:opacity-70">
+        <legend className="px-1 text-sm font-semibold">Attachments</legend>
+        <label className="block text-sm">Add files<input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.txt" className="mt-2 block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-slate-300 file:bg-slate-50 file:px-3 file:py-2" onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void addAttachments(files) }} /></label>
+        <p className="mt-2 text-xs text-slate-600">Up to 3 files, 2 MB total. PDF, PNG, JPG, or TXT. These files will accompany every automated email. Pause outreach to edit attachments.</p>
+        {readingFiles && <p role="status" className="mt-2 text-sm">Preparing attachments...</p>}
+        {attachmentError && <p role="alert" className="mt-2 text-sm text-red-800">{attachmentError}</p>}
+        <ul className="mt-3 space-y-2">{attachments.map((file, index) => <li key={file.id || index} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="min-w-0 break-words">{file.name} <span className="text-xs text-slate-500">({Math.ceil(file.size / 1024)} KB)</span></span><button type="button" className="shrink-0 font-semibold text-red-700" aria-label={'Remove ' + file.name} onClick={() => { setAttachments(current => current.filter((_, position) => position !== index)); setApproved(false); setAttachmentError('') }}>Remove</button></li>)}</ul>
+      </fieldset>
+      {data?.profile?.enabled ? <button type="button" disabled={busy} onClick={() => updateOutreach('pause')} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Pause my outreach to edit</button> : <><button disabled={busy || generating || readingFiles || !data} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Save message and attachments</button><label className="flex items-start gap-3 text-sm leading-6"><input type="checkbox" disabled={generating || busy || readingFiles} checked={approved} onChange={event => setApproved(event.target.checked)} className="mt-1 size-4 accent-[#0b1f3a]" /><span>I approve this message, attachments, and audience for my organization. Matching saved prospects may receive this email automatically.</span></label><button type="button" disabled={busy || generating || readingFiles || !approved || !profile.senderId || !profile.subject.trim() || !profile.message.trim() || !profile.companyAddress.trim()} onClick={() => updateOutreach('activate')} className="rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy && <LoaderCircle className="mr-2 inline size-4 animate-spin" />}{pendingAction === 'activate' ? 'Preparing and starting emails...' : busy ? 'Updating outreach...' : 'Start sending emails'}</button></>}
     </form>
     <OutreachContactDirectory industryId={profile.industryId} />
     {data?.automation.enabled && data.counts.some(item => item.status === 'FAILED' && item.count > 0) && <button type="button" disabled={busy} onClick={retryFailed} className="rounded-xl border border-black/30 bg-white px-4 py-3 text-sm font-semibold">{busy ? 'Retrying...' : 'Retry failed contacts'}</button>}

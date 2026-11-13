@@ -1,3 +1,4 @@
+import { resolveAttachments } from '@/lib/email-attachments'
 import { pool } from '@/lib/db'
 import { smtpReady, smtpTransport } from '@/lib/smtp-mailbox'
 
@@ -89,12 +90,13 @@ export async function processEmailQueue(organizationId?: string, ownerId?: strin
         // Pause/suppression changes made while resolving SMTP take effect before dispatch.
         const current = await getEmailServerConfig(job.organizationId, client)
         const optedOut = (await client.query('SELECT 1 FROM "EmailSuppression" WHERE "organizationId" = $1 AND "email" = $2', [job.organizationId, job.email])).rows.length
-        if (!current?.enabled || current.campaignId !== job.campaignId || optedOut) {
+        if (!current?.enabled || current.campaignId !== job.campaignId || JSON.stringify(current.attachments) !== JSON.stringify(config.attachments) || optedOut) {
           await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SKIPPED', "lockedUntil" = NULL WHERE "id" = $1`, [job.id]); continue
         }
+        const attachments = resolveAttachments(config.attachments || [], []).map(file => ({ filename: file.name, content: Buffer.from(file.content, 'base64'), contentType: file.type }))
         sending = true
         const result = await transport.sendMail({ from: { name: config.senderName || config.organizationName, address: config.email },
-          to: job.email, subject: config.subject, text, messageId: `<${job.id}@${config.email.split('@')[1]}>`,
+          to: job.email, subject: config.subject, text, attachments, disableFileAccess: true, disableUrlAccess: true, messageId: `<${job.id}@${config.email.split('@')[1]}>`,
           headers: { 'List-Unsubscribe': `<${unsubscribe}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } })
         if (!result.accepted?.length) throw new Error('Not accepted')
         await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SENT', "sentAt" = NOW(), "messageId" = $2,

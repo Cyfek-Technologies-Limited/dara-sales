@@ -20,8 +20,9 @@ Smartlead and Google mailbox OAuth variables are no longer read. Normal Google l
 1. Open Email outreach and enter its sender business name, email, SMTP hostname, port 465 or 587, and SMTP/app password.
 2. Click Connect business mailbox. The backend verifies SMTP authentication without sending an email. Some providers require app passwords, administrator approval, or do not allow password-based SMTP. Nodemailer does not bypass provider rules, mailbox quotas, or Google app restrictions.
 3. Choose the connected sender and audience. Write the subject and message; `{{company_name}}` substitutes the prospect's business name. Enter the company's address.
-4. Review and approve, then start automation. Existing matching saved prospects are included. Saving new matching prospects also starts a queue-processing attempt.
-5. Pause before editing or reconnecting. Pausing prevents new dispatches; an email already handed to SMTP cannot be recalled.
+4. Optionally add up to three attachments (PDF, PNG, JPG, or TXT), totalling up to 2 MB. Files are saved privately with the organization's outreach profile and accompany every automated email, including background sends. File bytes stay on the server after saving; activity refreshes return only attachment names and sizes. Pause before adding or removing files, then approve the updated message and attachments before restarting. Changing attachments starts a new campaign version; it does not automatically resend already attempted emails.
+5. Review and approve, then start automation. Existing matching saved prospects are included. Saving new matching prospects also starts a queue-processing attempt.
+6. Pause before editing or reconnecting. Pausing prevents new dispatches; an email already handed to SMTP cannot be recalled.
 
 There are no provider API keys or third-party campaign settings in the customer interface. Customers still need an existing mailbox that permits their intended email use. Nodemailer is a free library, not an email hosting service.
 

@@ -232,6 +232,7 @@ model SalesOutreach {
 }
 
 model EmailAutomation {
+  attachments     Json         @default("[]")
   organizationId  String       @id
   encryptedApiKey String       @default("")
   campaignId      String       @default("")
