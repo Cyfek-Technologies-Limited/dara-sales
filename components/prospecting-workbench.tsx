@@ -18,7 +18,8 @@ const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-
 export default function ProspectingWorkbench({ categories, teammates, storageKey, initialDraft, draftUpdatedAt, autoAssignUserId }: { categories: Category[]; teammates: Teammate[]; storageKey: string; initialDraft: ProspectingDraft; draftUpdatedAt: number; autoAssignUserId?: string }) {
   const router = useRouter()
   const { form, update, status: draftStatus, ready } = useProspectingDraft(storageKey, initialDraft, draftUpdatedAt)
-  const { offering, businessInput = offering || form.websiteUrl || '', location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit, ownerId } = form
+  const { offering, businessInput = offering || form.websiteUrl || '', location, categoryId: draftCategoryId, keywords, businessSize, contactPreference, exclusions, resultLimit, ownerId } = form
+  const categoryId = autoAssignUserId && !categories.some(category => category.id === draftCategoryId) ? categories[0]?.id || '' : draftCategoryId
   const setOffering = (value: string) => update('offering', value)
   const setLocation = (value: string) => update('location', value)
   const setCategoryId = (value: string) => update('categoryId', value)
@@ -167,7 +168,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
   const feedback = error || message
 
   return <div className="mt-5 space-y-4">
-    <section className="rounded-2xl border-[1px] border-black/30 bg-white p-5 shadow-sm sm:p-6">
+    {!autoAssignUserId && <section className="rounded-2xl border-[1px] border-black/30 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#102842] text-white"><Radar className="size-5" /></span><div><h1 className="text-lg font-bold text-[#0b1f3a]">Tell us about your business</h1><p className="mt-1 text-xs leading-5 text-[#475569]">Describe your business, product, or service, or paste your website URL. Dara will suggest industries that could become your customers or clients.</p></div></div>
       <form onSubmit={suggestIndustries} className="mt-5">
         <fieldset disabled={!ready || Boolean(loading) || Boolean(savingLeadKey) || savingAll} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
@@ -185,7 +186,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
 
     <section className="rounded-2xl border-[1px] border-black/30 bg-gradient-to-br from-[#f1f4f8] via-white to-[#edf2f7] p-5 shadow-sm sm:p-6"><div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#102842] text-white shadow-md shadow-[#0b1f3a]/20"><Search className="size-5" /></span><div><h2 className="text-lg font-bold text-[#0b1f3a]">Discover businesses</h2><p className="mt-1 text-xs leading-5 text-[#475569]">Search current web results for businesses in a saved category. Review the official website and source page before adding any prospect.</p></div></div>
       {categories.length ? <form onSubmit={searchBusinesses} className="mt-5">
-        <p className="mb-4 rounded-xl border border-[#b9cbe0] bg-[#e5edf6] p-3 text-xs leading-5 text-[#0b1f3a]">Search targets potential customers who use what you sell. Businesses selling, distributing, or supplying the same offering are excluded.</p>
+        <p className="mb-4 rounded-xl border border-[#b9cbe0] bg-[#e5edf6] p-3 text-xs leading-5 text-[#0b1f3a]">{autoAssignUserId ? 'Find businesses in your assigned industry. Any saved prospects are automatically assigned to you.' : 'Search targets potential customers who use what you sell. Businesses selling, distributing, or supplying the same offering are excluded.'}</p>
         <fieldset disabled={!ready || Boolean(loading) || Boolean(savingLeadKey) || savingAll} className="grid gap-4 sm:grid-cols-2 disabled:opacity-70">
           <label className="text-[13px] font-semibold text-slate-800">Industry category
             <select required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className={fieldClassName}>
@@ -229,13 +230,13 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
             </select>
           </label>
           <div className="sm:col-span-2">
-            <button disabled={loading === 'search' || !offering.trim() || !location.trim() || !categoryId} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0b1f3a]/20 transition hover:bg-[#142e50] focus-visible:ring-4 focus-visible:ring-[#c9d8e8] disabled:cursor-not-allowed disabled:opacity-50">
+            <button disabled={loading === 'search' || (!autoAssignUserId && !offering.trim()) || !location.trim() || !categoryId} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f3a] px-5 py-3 text-sm font-bold text-white shadow-md shadow-[#0b1f3a]/20 transition hover:bg-[#142e50] focus-visible:ring-4 focus-visible:ring-[#c9d8e8] disabled:cursor-not-allowed disabled:opacity-50">
               {loading === 'search' ? <LoaderCircle className="size-4 animate-spin" /> : <Search className="size-4" />}{loading === 'search' ? 'Finding businesses and checking contact pages...' : 'Find businesses'}
             </button>
             <p className="mt-2 text-[11px] leading-5 text-[#475569]">These fields guide web research. More restrictive searches may return fewer results. Review each source before saving a prospect.</p>
           </div>
         </fieldset>
-      </form> : <div className="mt-4 rounded-xl bg-[#f4f6f9] p-4 text-xs leading-5 text-[#475569]">Add industries and categories before searching. <Link href="/admin/industries" className="font-semibold underline">Manage industries</Link></div>}
+      </form> : <div className="mt-4 rounded-xl bg-[#f4f6f9] p-4 text-xs leading-5 text-[#475569]">{autoAssignUserId ? 'Ask your administrator to assign an industry with categories before searching.' : 'Add industries and categories before searching.'} <Link href="/admin/industries" className="font-semibold underline">Manage industries</Link></div>}
       {feedback && <p role={error ? 'alert' : 'status'} className={`mt-4 rounded-lg p-3 text-xs ${error ? 'border border-rose-300 bg-rose-100 text-rose-900' : 'border border-emerald-300 bg-emerald-100 text-emerald-950'}`}>{feedback}</p>}
       {businesses.length > 0 && <div className="mt-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
