@@ -10,7 +10,7 @@ import { type ProspectingDraft } from '@/lib/prospecting-draft'
 type Suggestion = { name: string; reason: string; subcategories: string[] }
 type Category = { id: string; name: string; industryName: string; industryId: string }
 type Teammate = { id: string; name: string | null; email: string }
-type Business = { emailSourceUrl?: string; phoneSourceUrl?: string; contactLookupStatus?: string; contactLookupMessage?: string; contactPagesChecked?: string[]; contactName?: string; contactJobTitle?: string; contactDepartment?: string; personSourceUrl?: string; businessName: string; summary: string; buyerReason?: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
+type Business = { generalCompanyContact?: boolean; emailSourceUrl?: string; phoneSourceUrl?: string; contactLookupStatus?: string; contactLookupMessage?: string; contactPagesChecked?: string[]; contactName?: string; contactJobTitle?: string; contactDepartment?: string; personSourceUrl?: string; businessName: string; summary: string; buyerReason?: string; website: string; sourceUrl: string; publicEmail?: string; publicPhone?: string; contactSourceUrl?: string }
 
 const fieldClassName = 'mt-1.5 w-full rounded-xl border-[1px] border-black/30 bg-white px-3.5 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-[#173b65] focus:ring-4 focus:ring-[#dbe5f0] disabled:cursor-wait'
 const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-900', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-900', 'bg-emerald-100 text-emerald-900', 'bg-[#dbe5f0] text-[#0b1f3a]']
@@ -269,7 +269,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
               <p className="mt-1 text-xs leading-5 text-slate-600">{business.summary}</p>
               {business.buyerReason && <p className="mt-2 text-xs leading-5 text-[#173b65]"><strong>Customer fit: </strong>{business.buyerReason}</p>}
               {resultContext?.targetContact && <div className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-xs leading-5">
-                {business.contactName ? <><strong>{business.contactName}</strong><p>{[business.contactJobTitle, business.contactDepartment].filter(Boolean).join(' · ')}</p></>
+                {business.generalCompanyContact ? <><strong>General company contacts</strong><p>No direct contact for the requested person or team was found.</p></> : business.contactName ? <><strong>{business.contactName}</strong><p>{[business.contactJobTitle, business.contactDepartment].filter(Boolean).join(' · ')}</p></>
                   : 'targetTeamSourceUrl' in business && typeof business.targetTeamSourceUrl === 'string' && business.targetTeamSourceUrl
                     ? <a href={business.targetTeamSourceUrl} target="_blank" rel="noreferrer" className="font-semibold text-[#173b65] underline">{business.contactDepartment} ({'inboxScope' in business && business.inboxScope === 'GROUP' ? 'group inbox' : business.publicEmail ? 'department inbox' : 'team source'})</a>
                     : 'No matching person or team found'}

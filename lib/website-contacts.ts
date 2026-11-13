@@ -25,7 +25,7 @@ export function sameBusinessWebsite(candidate: string, website: string) {
   } catch { return false }
 }
 
-async function readPage(input: string, website: string, deadline: number, redirects = 0): Promise<Page> {
+async function readPage(input: string, website: string, deadline: number, redirects = 0, javascript = false): Promise<Page> {
   if (redirects > 3 || Date.now() >= deadline || !sameBusinessWebsite(input, website)) throw new Error('Website unavailable')
   const url = new URL(input)
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -40,14 +40,14 @@ async function readPage(input: string, website: string, deadline: number, redire
       method: 'GET', agent: false, family: 4,
       lookup: (_hostname, _options, callback) => callback(null, addresses[0].address, 4),
       signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
-      headers: { 'User-Agent': 'DaraContactResearch/1.0', Accept: 'text/html,application/xhtml+xml', 'Accept-Encoding': 'identity' },
+      headers: { 'User-Agent': 'DaraContactResearch/1.0', Accept: javascript ? 'application/javascript,text/javascript,text/plain' : 'text/html,application/xhtml+xml', 'Accept-Encoding': 'identity' },
     }, response => {
       if ([301,302,303,307,308].includes(response.statusCode || 0) && response.headers.location) {
         response.destroy()
         try { resolve({ redirect: new URL(response.headers.location, url).toString() }) } catch { reject(new Error('Invalid website redirect')) }
         return
       }
-      if (response.statusCode !== 200 || !/text\/html|application\/xhtml\+xml/i.test(response.headers['content-type'] || '')) {
+      if (response.statusCode !== 200 || !(javascript ? /(?:java|ecma)script|text\/plain/i : /text\/html|application\/xhtml\+xml/i).test(response.headers['content-type'] || '')) {
         response.destroy(); reject(new Error('Page could not be read')); return
       }
       let wireBytes = 0
@@ -73,7 +73,23 @@ async function readPage(input: string, website: string, deadline: number, redire
     })
     request.on('error', reject); request.end()
   })
-  return 'redirect' in result ? readPage(result.redirect, website, deadline, redirects + 1) : result
+  return 'redirect' in result ? readPage(result.redirect, website, deadline, redirects + 1, javascript) : result
+}
+
+// Read literal rendered contact values, never execute website JavaScript.
+// Restrict to contact links and UI/data properties so library author emails
+// (for example addresses in copyright comments) are not treated as contacts.
+function scriptContactMarkup(script: string) {
+  const decoded = script.replace(/\\u([\da-f]{4})|\\x([\da-f]{2})/gi, (_, unicode, hex) => String.fromCharCode(parseInt(unicode || hex, 16))).replace(/\\\//g, '/')
+  const values = [
+    ...[...decoded.matchAll(/["'`](?:mailto:|tel:)([^"'`\r\n]{1,300})["'`]/gi)].map(match => match[0].slice(1, -1)),
+    ...[...decoded.matchAll(/\b(?:children|email|telephone|phone)["']?\s*:\s*["'`]([^"'`\r\n]{1,254})["'`]/g)].map(match => match[1]),
+  ]
+  return values.filter(value => /^(?:(?:mailto:)?[^\s<>"']+@[^\s<>"']+\.[a-z]{2,}|(?:tel:)?\+?[\d(][\d\s().-]{6,38})$/i.test(value))
+    .map(value => {
+      const contact = value.replace(/^(?:mailto|tel):/i, '')
+      return (contact.includes('@') ? contact : `Phone: ${contact}`).replace(/[<>&"']/g, char => `&#${char.charCodeAt(0)};`)
+    }).join('\n')
 }
 
 function decode(value: string) {
@@ -112,7 +128,7 @@ function contactsOnPage(page: Page) {
     emails.push({ value, sourceUrl: page.url, rank: rank + (general ? 20 : 0) + (ownDomain ? 30 : 0) })
   }
   const addPhone = (raw: string, rank = 0) => {
-    const value = raw.trim().replace(/;.*$/, '').replace(/\s+/g, ' ')
+    const value = raw.trim().replace(/;.*$/, '').replace(/[\u2010-\u2015\u2212]/g, '-').replace(/\s+/g, ' ')
     const digits = value.replace(/\D/g, '')
     if (!/^[+\d(][\d\s().+-]+$/.test(value) || digits.length < 7 || digits.length > 15 || value.length > 40 || /^(\d)\1+$/.test(digits)) return
     phones.push({ value, sourceUrl: page.url, rank })
@@ -150,7 +166,7 @@ function contactsOnPage(page: Page) {
 }
 
 export async function extractWebsiteContacts(website: string, preferredPages: string[] = [], batchDeadline = Date.now() + 35000): Promise<WebsiteContacts> {
-  const deadline = Math.min(batchDeadline, Date.now() + 12000)
+  const deadline = Math.min(batchDeadline, Date.now() + 18000)
   const pages: Page[] = []
   const read = async (url: string) => {
     try { const page = await readPage(url, website, Math.min(deadline, Date.now() + 5000)); pages.push(page); return page } catch { return null }
@@ -170,11 +186,36 @@ export async function extractWebsiteContacts(website: string, preferredPages: st
       }).filter((link): link is { url: string; text: string } => Boolean(link && sameBusinessWebsite(link.url, website) && /contact|get.in.touch|reach.us|enquir/i.test(link.url + ' ' + link.text)))
       for (const link of links.sort((a,b) => a.url.length - b.url.length)) candidates.add(link.url)
     }
-    for (const path of ['/contact', '/contact-us', '/contact.html']) candidates.add(new URL(path, homepage?.url || website).toString())
-    const targets = [...candidates].filter(url => url !== homepage?.url && !/\.(pdf|jpe?g|png|zip|docx?)(\?|$)/i.test(url)).slice(0,3)
+    for (const path of ['/contact', '/contact-us', '/contact-us/', '/contact.html', '/contact.php', '/about/contact']) candidates.add(new URL(path, homepage?.url || website).toString())
+    const targets = [...candidates].filter(url => url !== homepage?.url && !/\.(pdf|jpe?g|png|zip|docx?)(\?|$)/i.test(url)).slice(0,4)
     await Promise.allSettled(targets.map(read))
   }
   const all = pages.map(contactsOnPage)
+  const assetSources: string[] = []
+  // Inline hydration data and React/Vue bundles can contain the rendered footer
+  // even when the initial HTML is only an empty application shell.
+  for (const page of pages) {
+    const inline = [...page.html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(match => scriptContactMarkup(match[1])).join('\n')
+    if (inline) all.push(contactsOnPage({ url: page.url, html: inline }))
+  }
+  if (!all.some(item => item.emails.length) || !all.some(item => item.phones.length)) {
+    const assets = new Map<string, string>()
+    for (const page of pages) {
+      for (const [tag] of page.html.matchAll(/<(?:script|link)\b[^>]{0,4000}>/gi)) {
+        const src = attribute(tag, 'src') || (/modulepreload|as\s*=\s*["']script/i.test(tag) ? attribute(tag, 'href') : '')
+        if (!src) continue
+        try {
+          const url = new URL(src, page.url); url.hash = ''
+          if (sameBusinessWebsite(url.toString(), website) && /\.(?:m?js)(?:$|\?)/i.test(url.pathname) && !/analytics|gtag|tracking|vendor/i.test(url.pathname)) assets.set(url.toString(), page.url)
+        } catch { /* Ignore invalid asset URLs. */ }
+      }
+    }
+    await Promise.allSettled([...assets].slice(0,3).map(async ([url, sourceUrl]) => {
+      const asset = await readPage(url, website, Math.min(deadline, Date.now() + 5000), 0, true)
+      assetSources.push(asset.url)
+      all.push(contactsOnPage({ url: sourceUrl, html: scriptContactMarkup(asset.html) }))
+    }))
+  }
   const email = all.flatMap(item => item.emails).sort((a,b) => b.rank - a.rank)[0]
   const phone = all.flatMap(item => item.phones).sort((a,b) => b.rank - a.rank)[0]
   const status = email && phone ? 'FOUND' : email || phone ? 'PARTIAL' : pages.length ? 'NOT_FOUND' : 'UNAVAILABLE'
@@ -182,6 +223,6 @@ export async function extractWebsiteContacts(website: string, preferredPages: st
     contactSourceUrl: email?.sourceUrl || phone?.sourceUrl || '', contactLookupStatus: status,
     contactLookupMessage: status === 'UNAVAILABLE' ? 'Website contact lookup was blocked or timed out. Open the website to review its contact page.'
       : status === 'NOT_FOUND' ? 'No email or phone was found in the pages we could read.' : status === 'PARTIAL' ? 'Some published contact details were found; other details could not be extracted.' : 'Email and phone extracted from the business website.',
-    contactPagesChecked: [...new Set(pages.map(page => page.url))],
+    contactPagesChecked: [...new Set([...pages.map(page => page.url), ...assetSources])],
   }
 }

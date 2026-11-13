@@ -78,13 +78,14 @@ export async function POST(request: Request) {
   if (duplicate) return NextResponse.json({ error: 'This business is already in your prospect pipeline.' }, { status: 409 })
 
   const leadId = crypto.randomUUID()
+  const generalContactNote = body.generalCompanyContact === true ? ' | Contact type: general company inbox / phone' : ''
   const teamSource = teamSourceValid && contactDepartment ? ` | ${groupInbox ? 'Group inbox' : body.inboxScope === 'DEPARTMENT' ? 'Department inbox' : 'Team'} source: ${teamSourceUrl}` : ''
   try {
     await prepareEmailAutomation(admin.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))
     await pool.query(
       `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "contactName", "contactJobTitle", "contactDepartment", "updatedAt")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())`,
-      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${email && emailSourceUrl ? ` | Email source: ${emailSourceUrl}` : ''}${phone && phoneSourceUrl ? ` | Phone source: ${phoneSourceUrl}` : ''}${personSourceValid && contactName ? ` | Person source: ${personSourceUrl}` : ''}${teamSource}`, summary, contactName, contactJobTitle, contactDepartment],
+      [leadId, admin.organizationId, ownerId, businessName, email, phone, category.industryName, categoryId, website, `Web research source: ${sourceUrl}${email && emailSourceUrl ? ` | Email source: ${emailSourceUrl}` : ''}${phone && phoneSourceUrl ? ` | Phone source: ${phoneSourceUrl}` : ''}${personSourceValid && contactName ? ` | Person source: ${personSourceUrl}` : ''}${teamSource}${generalContactNote}`, summary, contactName, contactJobTitle, contactDepartment],
     )
     after(() => processEmailQueue(admin.organizationId).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, id: leadId, ownerId }, { status: 201 })

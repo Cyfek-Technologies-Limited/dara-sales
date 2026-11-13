@@ -139,6 +139,7 @@ Also research the appropriate publicly listed business contact (for example proc
       publicEmail: string; publicPhone: string; contactSourceUrl: string
       targetTeamSourceUrl?: string; emailSourceUrl?: string; phoneSourceUrl?: string; contactLookupMessage?: string
       inboxScope?: 'DEPARTMENT' | 'GROUP'
+      generalCompanyContact?: boolean
     }
     const candidates: Candidate[] = Array.isArray(parsed.businesses) ? (parsed.businesses as Record<string, unknown>[]).slice(0, resultLimit).flatMap<Candidate>(item => {
       if (!item || typeof item !== 'object') return []
@@ -212,11 +213,22 @@ Also research the appropriate publicly listed business contact (for example proc
       while (cursor < candidates.length) {
         const index = cursor++
         const business = candidates[index]
-        if (targetContact) {
+        if (targetContact && (business.publicEmail || business.publicPhone)) {
           enriched[index] = business
           continue
         }
         const contacts = await extractWebsiteContacts(business.website, business.contactSourceUrl ? [business.contactSourceUrl] : [], contactDeadline)
+        if (targetContact) {
+          enriched[index] = { ...business, ...contacts,
+            contactName: '', contactJobTitle: '', contactDepartment: '', personSourceUrl: '',
+            targetTeamSourceUrl: '', inboxScope: undefined,
+            generalCompanyContact: Boolean(contacts.publicEmail || contacts.publicPhone),
+            contactLookupMessage: contacts.publicEmail || contacts.publicPhone
+              ? 'No direct work contact was found. These are published general company contacts, not the requested person or department.'
+              : contacts.contactLookupMessage,
+          }
+          continue
+        }
         const publicEmail = contacts.publicEmail || business.publicEmail
         const publicPhone = contacts.publicPhone || business.publicPhone
         const emailSourceUrl = contacts.publicEmail ? contacts.emailSourceUrl : business.publicEmail ? business.contactSourceUrl : ''

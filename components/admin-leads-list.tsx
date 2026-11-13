@@ -5,6 +5,7 @@ import { salesStageLabel as stageLabel } from '@/lib/sales-stage-label'
 import ProspectStatusEditor from '@/components/prospect-status-editor'
 
 import { useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Building2, ExternalLink, X } from 'lucide-react'
 
 export type AdminLead = {
@@ -42,6 +43,10 @@ function webUrl(value: string | null) {
 }
 
 export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
+  const router = useRouter()
+  const contactLookup = useRef(false)
+  const [checkingContacts, setCheckingContacts] = useState(false)
+  const [contactFeedback, setContactFeedback] = useState<{ id: string; message: string } | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const [selectedSnapshot, setSelected] = useState<AdminLead | null>(null)
   const selected = leads.find(lead => lead.id === selectedSnapshot?.id) || selectedSnapshot
@@ -49,6 +54,19 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
   function openLead(lead: AdminLead) {
     setSelected(lead)
     if (!dialog.current?.open) dialog.current?.showModal()
+  }
+
+  async function findContacts() {
+    if (!selected || contactLookup.current) return
+    const id = selected.id
+    contactLookup.current = true; setCheckingContacts(true); setContactFeedback(null)
+    try {
+      const response = await fetch(`/api/admin/leads/${encodeURIComponent(id)}/contacts`, { method: 'POST', signal: AbortSignal.timeout(25000) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Could not check contacts.')
+      setContactFeedback({ id, message: result.message }); router.refresh()
+    } catch (error) { setContactFeedback({ id, message: error instanceof Error ? error.message : 'Could not check contacts.' }) }
+    finally { contactLookup.current = false; setCheckingContacts(false) }
   }
 
   const website = webUrl(selected?.website || null)
@@ -79,6 +97,11 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
             <div><dt className="text-xs font-semibold text-slate-500">Created</dt><dd className="mt-1">{dateLabel(selected.createdAt)}</dd></div>
             <div><dt className="text-xs font-semibold text-slate-500">Last updated</dt><dd className="mt-1">{dateLabel(selected.updatedAt)}</dd></div>
           </dl>
+          {website && <section className="rounded-xl border border-slate-300 bg-slate-50 p-4">
+            <button type="button" disabled={checkingContacts} onClick={findContacts} className="rounded-lg bg-[#0b1f3a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{checkingContacts ? 'Checking website and footer…' : 'Find missing contacts'}</button>
+            <p className="mt-2 text-xs leading-5 text-slate-600">Checks public website pages and footer contacts, including sites loaded with JavaScript. Existing email and phone details are preserved. Found details may be general company contacts.</p>
+            {contactFeedback?.id === selected.id && <p role="status" className="mt-2 text-sm leading-6">{contactFeedback.message}</p>}
+          </section>}
           {selected.responseText && <section className="rounded-xl border border-slate-300 bg-blue-50 p-4"><h3 className="text-sm font-semibold">Recorded response</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm">{selected.responseText}</p></section>}
           <section className="rounded-xl border-[1px] border-black/30 bg-slate-50 p-4"><h3 className="text-sm font-semibold">Notes</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{selected.notes || 'No notes added.'}</p></section>
           <section><h3 className="text-sm font-semibold">Source</h3><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-slate-600">{selected.source || 'No source recorded.'}</p>{sourceLinks.length > 0 && <ul className="mt-2 space-y-2">{sourceLinks.map((url) => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 break-all text-xs font-medium text-violet-700 underline">{url}<ExternalLink className="size-3 shrink-0" /></a></li>)}</ul>}</section>
