@@ -43,21 +43,21 @@ export default async function IndustriesPage() {
        LEFT JOIN "VisibleSalesOutreach" s ON s."leadId" = l."id"
          AND s."occurredAt" >= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos')
          AND s."occurredAt" < ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') + INTERVAL '1 day') AT TIME ZONE 'Africa/Lagos')
-       LEFT JOIN "OrganizationMember" m ON m."industryId" = i."id" AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
+       LEFT JOIN "OrganizationMember" m ON i."id" = ANY(m."industryIds" || ARRAY[m."industryId"]) AND m."organizationId" = i."organizationId" AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
        WHERE i."organizationId" = $1
        GROUP BY c."id", c."industryId", c."name", i."name"
        ORDER BY i."name", c."name"`,
       [organization.id],
     ),
     reader.query(
-      `SELECT m."authUserId" AS "userId", u."name", u."email", m."jobTitle", m."industryId", i."name" AS "industryName",
+      `SELECT m."authUserId" AS "userId", u."name", u."email", m."jobTitle", m."industryId", m."industryIds", i."name" AS "industryName",
               COUNT(DISTINCT l."id") FILTER (WHERE l."stage" = 'CLIENT')::int AS "clientCount"
        FROM "OrganizationMember" m
        JOIN "user" u ON u."id" = m."authUserId"
        LEFT JOIN "Industry" i ON i."id" = m."industryId"
-       LEFT JOIN "VisibleSalesLead" l ON l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."industry" = i."name"
+       LEFT JOIN "VisibleSalesLead" l ON l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId"
        WHERE m."organizationId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
-       GROUP BY m."authUserId", u."name", u."email", m."jobTitle", m."industryId", i."name"
+       GROUP BY m."authUserId", u."name", u."email", m."jobTitle", m."industryId", m."industryIds", i."name"
        ORDER BY i."name" NULLS FIRST, u."name"`,
       [organization.id],
     ),
@@ -85,6 +85,7 @@ export default async function IndustriesPage() {
     email: teammate.email,
     jobTitle: teammate.jobTitle,
     industryId: teammate.industryId,
+    industryIds: teammate.industryIds?.length ? teammate.industryIds : teammate.industryId ? [teammate.industryId] : [],
     industryName: teammate.industryName,
     clientCount: Number(teammate.clientCount),
   }))
@@ -99,7 +100,7 @@ export default async function IndustriesPage() {
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Industries</h1>
             <p className="mt-1 max-w-2xl text-sm text-[#657286]">Build your industry list, assign each intern a market, and track how many clients the team has won in each one.</p>
           </header>
-          <IndustryManager industries={industries} teammates={teammates} />
+          <IndustryManager industries={industries} teammates={teammates} canAssign={organization.role === 'ADMIN'} />
         </section>
       </div>
     </main>

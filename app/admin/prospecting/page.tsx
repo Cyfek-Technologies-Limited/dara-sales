@@ -11,7 +11,7 @@ export default async function ProspectingPage() {
   if (!session?.user) redirect("/sign-in");
   const organization = (
     await pool.query(
-      `SELECT m."role", m."industryId", o."id", o."name" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
+      `SELECT m."role", m."industryId", m."industryIds", o."id", o."name" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
      WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`,
       [session.user.id]
     )
@@ -22,8 +22,8 @@ export default async function ProspectingPage() {
     pool.query(
       `SELECT c."id", c."name", i."name" AS "industryName", i."id" AS "industryId"
        FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId"
-       WHERE i."organizationId" = $1 AND ($2::text IS NULL OR i."id" = $2) ORDER BY i."name", c."name"`,
-      [organization.id, organization.role === 'STAFF' ? organization.industryId || 'unassigned' : null]
+       WHERE i."organizationId" = $1 AND ($2::text[] IS NULL OR i."id" = ANY($2::text[])) ORDER BY i."name", c."name"`,
+      [organization.id, organization.role === 'STAFF' ? (organization.industryIds?.length ? organization.industryIds : organization.industryId ? [organization.industryId] : []) : null]
     ),
     pool.query(
       `SELECT u."id", u."name", u."email" FROM "OrganizationMember" m

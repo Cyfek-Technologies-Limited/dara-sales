@@ -11,10 +11,10 @@ async function getAdmin() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) return null
   const organization = (await pool.query(
-    `SELECT m."role", m."industryId", o."id" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
+    `SELECT m."role", m."industryId", m."industryIds", o."id" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
      WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
   )).rows[0]
-  return organization ? { organizationId: organization.id, role: organization.role, industryId: organization.industryId } : null
+  return organization ? { organizationId: organization.id, role: organization.role, industryIds: organization.industryIds?.length ? organization.industryIds : organization.industryId ? [organization.industryId] : [] } : null
 }
 
 function cleanUrl(value: unknown) {
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     [categoryId, admin.organizationId],
   )).rows[0]
   if (!category) return NextResponse.json({ error: 'Choose a category from your saved industries.' }, { status: 400 })
-  if (admin.role === 'STAFF' && category.industryId !== admin.industryId) return NextResponse.json({ error: 'Choose a category in your assigned industry.' }, { status: 403 })
+  if (admin.role === 'STAFF' && !admin.industryIds.includes(category.industryId)) return NextResponse.json({ error: 'Choose a category in one of your assigned industries.' }, { status: 403 })
   const industry = category.industryName
   const sizeDescriptions: Record<string, string> = {
     ANY: 'Any business size', SMALL: 'Small businesses with 1-50 employees',

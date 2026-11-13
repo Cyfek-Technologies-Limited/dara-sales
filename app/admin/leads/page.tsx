@@ -19,7 +19,7 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
   const selectedLabel = statusFilters.find(([status]) => status === selectedStatus)![1]
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) redirect('/sign-in')
-  const organization = (await pool.query(`SELECT m."role", o."id", o."name" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId"=o."id" WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id])).rows[0]
+  const organization = (await pool.query(`SELECT m."role", m."industryIds", m."industryId", o."id", o."name" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId"=o."id" WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id])).rows[0]
   if (!organization) redirect('/onboarding')
   const reader = workspaceReader(organization, session.user.id)
   const leads: AdminLead[] = (await reader.query(
@@ -29,9 +29,10 @@ export default async function AdminLeadsPage({ searchParams }: { searchParams: P
      LEFT JOIN LATERAL (SELECT "channel","occurredAt" FROM "VisibleSalesOutreach" WHERE "leadId"=l."id" ORDER BY "occurredAt" DESC LIMIT 1) o ON true
      WHERE l."organizationId"=$1 ORDER BY l."updatedAt" DESC`, [organization.id],
   )).rows.map((lead: LeadRow) => ({ ...lead, createdAt: lead.createdAt.toISOString(), updatedAt: lead.updatedAt.toISOString(), occurredAt: lead.occurredAt?.toISOString() || null }))
+  const assignedIndustryIds = organization.role === 'STAFF' ? (organization.industryIds?.length ? organization.industryIds : organization.industryId ? [organization.industryId] : []) : null
   const [industryRows, categoryRows, teammateRows] = await Promise.all([
-    reader.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 ORDER BY "name"', [organization.id]),
-    reader.query(`SELECT c."id", c."name", c."industryId" FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId" WHERE i."organizationId" = $1 ORDER BY c."name"`, [organization.id]),
+    reader.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 AND ($2::text[] IS NULL OR "id" = ANY($2::text[])) ORDER BY "name"', [organization.id, assignedIndustryIds]),
+    reader.query(`SELECT c."id", c."name", c."industryId" FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId" WHERE i."organizationId" = $1 AND ($2::text[] IS NULL OR i."id" = ANY($2::text[])) ORDER BY c."name"`, [organization.id, assignedIndustryIds]),
     reader.query(`SELECT m."authUserId" AS "id", u."name", u."email" FROM "OrganizationMember" m JOIN "user" u ON u."id" = m."authUserId" WHERE m."organizationId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE' ORDER BY u."name", u."email"`, [organization.id]),
   ])
   const filteredLeads = leads.filter(lead => lead.contactStatus === selectedStatus)

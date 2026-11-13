@@ -43,6 +43,7 @@ model Organization {
 }
 
 model OrganizationMember {
+  industryIds    String[]     @default([])
   id             String       @id @default(cuid())
   organizationId String
   authUserId     String

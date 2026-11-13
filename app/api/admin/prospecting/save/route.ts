@@ -11,10 +11,10 @@ async function getAdmin() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) return null
   const organization = (await pool.query(
-    `SELECT m."role", o."id" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
+    `SELECT m."role", m."industryIds", m."industryId", o."id" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
      WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
   )).rows[0]
-  return organization ? { organizationId: organization.id, role: organization.role, userId: session.user.id } : null
+  return organization ? { organizationId: organization.id, role: organization.role, industryIds: organization.industryIds?.length ? organization.industryIds : organization.industryId ? [organization.industryId] : [], userId: session.user.id } : null
 }
 
 function validWebUrl(value: unknown) {
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   if (!businessName || !website || !sourceUrl || !categoryId) return NextResponse.json({ error: 'Business, website, source link, and category are required.' }, { status: 400 })
 
   const category = (await pool.query(
-    `SELECT c."id", i."name" AS "industryName" FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId"
+    `SELECT c."id", i."id" AS "industryId", i."name" AS "industryName" FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId"
      WHERE c."id" = $1 AND i."organizationId" = $2`, [categoryId, admin.organizationId],
   )).rows[0]
   const owner = requestedOwnerId ? (await pool.query(
@@ -66,6 +66,7 @@ export async function POST(request: Request) {
   )).rows[0] : null
   const ownerId = admin.role === 'STAFF' ? admin.userId : owner?.authUserId || null
   if (!category) return NextResponse.json({ error: 'Choose a valid industry category.' }, { status: 400 })
+  if (admin.role === 'STAFF' && !admin.industryIds.includes(category.industryId)) return NextResponse.json({ error: 'Choose a category in one of your assigned industries.' }, { status: 403 })
   if (email && !groupInbox && (!emailSourceUrl || !sameBusinessWebsite(emailSourceUrl, website!)) || phone && (!phoneSourceUrl || !sameBusinessWebsite(phoneSourceUrl, website!))) {
     return NextResponse.json({ error: 'Contact details need a source page on the business website.' }, { status: 400 })
   }

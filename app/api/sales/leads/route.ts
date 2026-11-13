@@ -12,13 +12,13 @@ async function getStaff() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) return null
   const member = (await pool.query(
-    `SELECT m."organizationId", m."industryId", i."name" AS "industryName" FROM "OrganizationMember" m
+    `SELECT m."organizationId", m."industryId", m."industryIds", i."name" AS "industryName" FROM "OrganizationMember" m
      LEFT JOIN "Industry" i ON i."id" = m."industryId"
      WHERE m."authUserId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
      ORDER BY m."joinedAt" DESC LIMIT 1`,
     [session.user.id],
   )).rows[0]
-  return member ? { userId: session.user.id, organizationId: member.organizationId, industryId: member.industryId as string | null, industryName: member.industryName as string | null } : null
+  return member ? { userId: session.user.id, organizationId: member.organizationId, industryId: member.industryId as string | null, industryIds: (member.industryIds?.length ? member.industryIds : member.industryId ? [member.industryId] : []) as string[], industryName: member.industryName as string | null } : null
 }
 
 export async function GET() {
@@ -47,7 +47,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const staff = await getStaff()
   if (!staff) return NextResponse.json({ error: 'Sign in with an active staff account.' }, { status: 401 })
-  if (!staff.industryName) return NextResponse.json({ error: 'Your admin must assign an industry before you can add prospects.' }, { status: 409 })
+  if (!staff.industryIds.length) return NextResponse.json({ error: 'Your admin must assign an industry before you can add prospects.' }, { status: 409 })
   const body = await request.json().catch(() => ({}))
   const businessName = typeof body.businessName === 'string' ? body.businessName.trim() : ''
   const channel = typeof body.channel === 'string' ? body.channel.toUpperCase() : ''
@@ -57,10 +57,10 @@ export async function POST(request: Request) {
   }
 
   const category = (await pool.query(
-    `SELECT c."id" FROM "IndustryCategory" c
+    `SELECT c."id", i."name" AS "industryName" FROM "IndustryCategory" c
      JOIN "Industry" i ON i."id" = c."industryId"
-     WHERE c."id" = $1 AND c."industryId" = $2 AND i."organizationId" = $3`,
-    [industryCategoryId, staff.industryId, staff.organizationId],
+     WHERE c."id" = $1 AND c."industryId" = ANY($2::text[]) AND i."organizationId" = $3`,
+    [industryCategoryId, staff.industryIds, staff.organizationId],
   )).rows[0]
   if (!category) return NextResponse.json({ error: 'Choose a subcategory under your assigned industry.' }, { status: 400 })
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     await client.query(
       `INSERT INTO "SalesLead" ("id", "organizationId", "ownerId", "businessName", "contactName", "email", "phone", "industry", "industryCategoryId", "website", "source", "notes", "updatedAt")
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW())`,
-      [leadId, staff.organizationId, staff.userId, businessName, body.contactName || null, body.email || null, body.phone || null, staff.industryName, industryCategoryId, body.website || null, body.source || null, body.note || null],
+      [leadId, staff.organizationId, staff.userId, businessName, body.contactName || null, body.email || null, body.phone || null, category.industryName, industryCategoryId, body.website || null, body.source || null, body.note || null],
     )
     await client.query(
       `INSERT INTO "SalesOutreach" ("id", "organizationId", "leadId", "ownerId", "channel", "platform", "note") VALUES ($1,$2,$3,$4,$5,$6,$7)`,

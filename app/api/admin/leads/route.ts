@@ -18,7 +18,11 @@ export async function POST(request: Request) {
     if (body[name] != null && (typeof body[name] !== 'string' || body[name].length > limit)) return NextResponse.json({ error: `Check the ${name} field and its length.` }, { status: 400 })
     fields[name] = (body[name] || '').trim()
   }
-  if (admin.organization.role === 'STAFF') fields.ownerId = admin.user.id
+  if (admin.organization.role === 'STAFF') {
+    fields.ownerId = admin.user.id
+    const assignedIds: string[] = admin.organization.industryIds?.length ? admin.organization.industryIds : admin.organization.industryId ? [admin.organization.industryId] : []
+    if (fields.industryId && !assignedIds.includes(fields.industryId)) return NextResponse.json({ error: 'Choose one of your assigned industries.' }, { status: 403 })
+  }
   if (!fields.businessName) return NextResponse.json({ error: 'Enter a business name.' }, { status: 400 })
   if (fields.email && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(fields.email)) return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 })
   if (fields.phone && (!/^[+\d(][\d\s().+-]+$/.test(fields.phone) || fields.phone.replace(/\D/g, '').length < 7 || fields.phone.replace(/\D/g, '').length > 15)) return NextResponse.json({ error: 'Enter a valid phone number, including its area or country code.' }, { status: 400 })

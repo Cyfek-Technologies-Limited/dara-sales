@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import MemberIndustryAssignments from "@/components/member-industry-assignments";
 
 export type ManagedCategory = {
   id: string;
@@ -27,6 +28,7 @@ export type IndustryTeammate = {
   email: string;
   jobTitle: string | null;
   industryId: string | null;
+  industryIds: string[];
   industryName: string | null;
   clientCount: number;
 };
@@ -34,9 +36,11 @@ export type IndustryTeammate = {
 export function IndustryManager({
   industries,
   teammates,
+  canAssign = false,
 }: {
   industries: ManagedIndustry[];
   teammates: IndustryTeammate[];
+  canAssign?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -46,7 +50,7 @@ export function IndustryManager({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
-  const [savingUserId, setSavingUserId] = useState("");
+
   const [savingIndustryId, setSavingIndustryId] = useState("");
 
   const categories = useMemo(
@@ -129,31 +133,6 @@ export function IndustryManager({
     }
   }
 
-  async function assignIndustry(userId: string, industryId: string) {
-    setSavingUserId(userId);
-    setError("");
-    setNotice("");
-    try {
-      const response = await fetch("/api/admin/industries/assign", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId, industryId: industryId || null }),
-      });
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error || "Could not update this assignment.");
-      setNotice("Industry assignment updated.");
-      router.refresh();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not update this assignment."
-      );
-    } finally {
-      setSavingUserId("");
-    }
-  }
 
   return (
     <div className="mt-6 space-y-5">
@@ -198,8 +177,7 @@ export function IndustryManager({
           <div className="border-b border-black/20 p-5">
             <h2 className="font-semibold">Intern assignments</h2>
             <p className="mt-1 text-sm text-[#657286]">
-              Each intern can work in one assigned industry and select from its
-              six subcategories.
+              Select one or more industries for each teammate, then save their assignments.
             </p>
           </div>
           {teammates.length ? (
@@ -208,7 +186,7 @@ export function IndustryManager({
                 <thead className="bg-[#f4f6f9] text-[10px] uppercase tracking-[0.12em] text-[#657286]">
                   <tr>
                     <th className="px-5 py-3">Teammate</th>
-                    <th className="px-5 py-3">Industry</th>
+                    <th className="px-5 py-3">Industries</th>
                     <th className="px-5 py-3">Clients</th>
                   </tr>
                 </thead>
@@ -223,25 +201,7 @@ export function IndustryManager({
                         </p>
                       </td>
                       <td className="px-5 py-4">
-                        <select
-                          aria-label={`Industry for ${teammate.name}`}
-                          value={teammate.industryId || ""}
-                          disabled={
-                            savingUserId === teammate.userId ||
-                            industries.length === 0
-                          }
-                          onChange={(event) =>
-                            assignIndustry(teammate.userId, event.target.value)
-                          }
-                          className="w-full max-w-xs rounded-lg border-[1px] border-black/30 bg-white px-3 py-2 text-xs"
-                        >
-                          <option value="">Unassigned</option>
-                          {industries.map((industry) => (
-                            <option key={industry.id} value={industry.id}>
-                              {industry.name}
-                            </option>
-                          ))}
-                        </select>
+                        <MemberIndustryAssignments key={teammate.userId + ':' + teammate.industryIds.join(',')} userId={teammate.userId} name={teammate.name} industries={industries} assignedIds={teammate.industryIds} canAssign={canAssign} />
                       </td>
                       <td className="px-5 py-4 font-semibold">
                         {teammate.clientCount}
@@ -262,7 +222,7 @@ export function IndustryManager({
           <div className="mt-5 space-y-4 gap-2 grid grid-cols-3">
             {industries.map((industry) => {
               const assigned = teammates.filter(
-                (teammate) => teammate.industryId === industry.id
+                (teammate) => teammate.industryIds.includes(industry.id)
               );
               const full = industry.categories.length >= 6;
               return (
