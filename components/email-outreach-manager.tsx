@@ -12,7 +12,7 @@ type Data = {
   mailboxConnectionAvailable: boolean
   automation: { configured: boolean; enabled: boolean }
   profile: { attachments: Attachment[]; enabled: boolean; subject: string; message: string; companyAddress: string; industryId: string | null; senderId: string | null } | null
-  senders: { id: string; email: string }[]
+  senders: { id: string; email: string; senderName?: string }[]
   industries: { id: string; name: string }[]
   counts: { status: string; count: number }[]
   jobs: { id: string; email: string; businessName: string; status: string }[]
@@ -45,7 +45,7 @@ export default function EmailOutreachManager() {
     if (initialize) setBusinessDescription(result.businessDescription || '')
     if (initialize) setProfile({ subject: result.profile?.subject || '', message: result.profile?.message || '', companyAddress: result.profile?.companyAddress || '', industryId: result.profile?.industryId || '', senderId: result.senders?.some((sender: { id: string }) => sender.id === result.profile?.senderId) ? result.profile.senderId : result.senders?.length === 1 ? result.senders[0].id : '' })
     if (selectSender && result.senders?.length === 1) {
-      setProfile(current => ({ ...current, senderId: result.senders[0].id }))
+      setProfile(current => ({ ...current, senderId: current.senderId || result.senders[0].id }))
       setApproved(false)
     }
   }, [])
@@ -82,7 +82,7 @@ export default function EmailOutreachManager() {
       const response = await fetch('/api/admin/email-outreach/mailbox', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mailbox) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not connect mailbox.')
-      setMessage(result.message); setMailbox({ ...mailbox, password: '' }); await load(false, true)
+      setMessage(result.message); setMailbox({ ...mailbox, email: '', password: '' }); await load(false, true)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not connect mailbox.') }
     finally { setConnecting(false) }
   }
@@ -147,21 +147,21 @@ export default function EmailOutreachManager() {
     {message && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">{message}</p>}
     <OutreachLiveMonitor starting={pendingAction === 'activate'} refreshKey={activityVersion} />
     <section id="outreach-mailbox" className="rounded-2xl border-[1px] border-black/30 bg-white p-6">
-      <h2 className="text-lg font-bold">Connect your business mailbox</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">Connect your organization's email once using its SMTP settings. Emails use your business name and mailbox. Your password is encrypted on the server and is never returned to your browser.</p>
+      <h2 className="text-lg font-bold">{data?.senders.length ? 'Add another business mailbox' : 'Connect your business mailbox'}</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600">Connect one or more business mailboxes using their SMTP settings. Choose which mailbox sends your campaign under Send from. Passwords are encrypted on the server.</p>
       <form onSubmit={connectMailbox} className="mt-4 grid gap-4 sm:grid-cols-2">
-        <fieldset disabled={connecting || Boolean(data?.automation.enabled)} className="contents">
+        <fieldset disabled={connecting || busy} className="contents">
           <label className="text-sm font-semibold">Business sender name<input required maxLength={120} value={mailbox.senderName} onChange={e => setMailbox({ ...mailbox, senderName: e.target.value })} className={field} placeholder="Your business name" /></label>
           <label className="text-sm font-semibold">Business email<input required type="email" autoComplete="username" value={mailbox.email} onChange={e => setMailbox({ ...mailbox, email: e.target.value })} className={field} placeholder="you@yourbusiness.com" /></label>
           <label className="text-sm font-semibold">SMTP server<input required value={mailbox.host} onChange={e => setMailbox({ ...mailbox, host: e.target.value })} className={field} placeholder="smtp.yourprovider.com" /></label>
           <label className="text-sm font-semibold">Secure SMTP port<select value={mailbox.port} onChange={e => setMailbox({ ...mailbox, port: e.target.value })} className={field}><option value="587">587 - STARTTLS</option><option value="465">465 - TLS</option></select></label>
           <label className="text-sm font-semibold sm:col-span-2">SMTP password / app password<input required type="password" autoComplete="new-password" value={mailbox.password} onChange={e => setMailbox({ ...mailbox, password: e.target.value })} className={field} /></label>
         </fieldset>
-        <p className="text-xs leading-5 text-slate-600 sm:col-span-2">Use the SMTP settings from your email provider. Some providers require a separate app password or disable password-based SMTP. Connecting checks sign-in without sending an email. Pause outreach before changing mailbox settings.</p>
-        <button disabled={connecting || busy || Boolean(data?.automation.enabled) || !data?.mailboxConnectionAvailable} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"><Mail className="size-4" />{connecting ? 'Connecting...' : 'Connect business mailbox'}</button>
+        <p className="text-xs leading-5 text-slate-600 sm:col-span-2">Use the SMTP settings from your email provider. Some providers require a separate app password or disable password-based SMTP. Connecting checks sign-in without sending an email. You can add another mailbox while outreach runs. Pause before changing the active sender or its credentials.</p>
+        <button disabled={connecting || busy || !data?.mailboxConnectionAvailable} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"><Mail className="size-4" />{connecting ? 'Connecting...' : data?.senders.length ? 'Add mailbox' : 'Connect business mailbox'}</button>
       </form>
       {data && !data.mailboxConnectionAvailable && <p className="mt-3 text-xs text-amber-800">Mailbox setup is awaiting the platform's encryption key.</p>}
-      {!!data?.senders.length && <p className="mt-3 text-xs text-slate-600">Connected to this organization: {data.senders.map(sender => sender.email).join(', ')}</p>}
+      {!!data?.senders.length && <div className="mt-5 border-t border-slate-200 pt-4"><h3 className="text-sm font-semibold">Connected mailboxes ({data.senders.length})</h3><div className="mt-3 grid gap-3 sm:grid-cols-2">{data.senders.map(sender => <div key={sender.id} className="flex items-start justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50 p-3"><div className="min-w-0"><p className="break-all text-sm font-semibold">{sender.email}</p>{sender.senderName && <p className="mt-1 text-xs text-slate-600">{sender.senderName}</p>}</div><span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-600">{data.profile?.senderId === sender.id && data.profile.enabled ? 'Active sender' : 'Connected'}</span></div>)}</div><p className="mt-2 text-xs text-slate-600">Each campaign uses one selected mailbox. To change an active sender, pause outreach, choose a mailbox below, then approve and restart.</p></div>}
     </section>
     <form id="outreach-message" onSubmit={saveMessage} className="space-y-4 rounded-2xl border-[1px] border-black/30 bg-white p-6">
       <h2 className="text-lg font-bold">Your message and audience</h2><p className="text-sm leading-6 text-slate-600">Choose who your organization wants to reach and approve its own email. Dara sends through your connected business mailbox automatically.</p>

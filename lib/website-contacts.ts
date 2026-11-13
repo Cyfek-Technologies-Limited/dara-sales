@@ -160,7 +160,11 @@ function contactsOnPage(page: Page) {
   const visible = decode(page.html.replace(/<!--[\s\S]*?-->/g,' ').replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, '\n'))
     .replace(/([\w.+-]+)\s*(?:\[at\]|\(at\))\s*([\w.-]+)\s*(?:\[dot\]|\(dot\))\s*([a-z]{2,})/gi, '$1@$2.$3')
   for (const email of (visible + ' ' + cloudflareEmails(page.html)).match(/[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d.-]+\.[a-z]{2,}/gi) || []) addEmail(email)
-  for (const match of visible.matchAll(/(?:telephone|tel|phone|mobile|whats\s?app|call(?:\s+us)?|hotline)\s*[:.\-]?\s*(\+?\d[\d \t().-]{5,35}\d)/gi)) addPhone(match[1], 10)
+  for (const match of visible.matchAll(/(?:telephone|tel|phone|mobile|whats\s?app|call(?:\s+us)?|hotline)(?:\s+(?:numbers?|nos?\.?))?\s*[:;.\-]?\s*(\+?\d[\d \t().-]{5,35}\d)/gi)) addPhone(match[1], 10)
+  // Nigerian business numbers are frequently published as 0802 321 1344,
+  // without a tel link or a phone label. Extract each number independently.
+  for (const match of visible.matchAll(/(?<!\d)0[789]\d(?:[ \t().-]*\d){8}(?!\d)/g)) addPhone(match[0], 15)
+  for (const match of visible.matchAll(/\+234[ \t().-]*(?:\(0\)[ \t.-]*)?[789]\d(?:[ \t().-]*\d){8}(?!\d)/g)) addPhone(match[0].replace('(0)', ''), 15)
   for (const match of visible.matchAll(/(?:\+\d[\d \t().-]{6,30}\d|\b0[789]\d{9}\b)/g)) addPhone(match[0])
   return { emails, phones }
 }

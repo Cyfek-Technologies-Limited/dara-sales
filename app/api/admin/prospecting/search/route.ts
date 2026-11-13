@@ -1,3 +1,4 @@
+import { researchBusinessContacts } from '@/lib/business-contact-research'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
@@ -140,6 +141,8 @@ Also research the appropriate publicly listed business contact (for example proc
       targetTeamSourceUrl?: string; emailSourceUrl?: string; phoneSourceUrl?: string; contactLookupMessage?: string
       inboxScope?: 'DEPARTMENT' | 'GROUP'
       generalCompanyContact?: boolean
+      generalPhone?: boolean
+      generalEmail?: boolean
     }
     const candidates: Candidate[] = Array.isArray(parsed.businesses) ? (parsed.businesses as Record<string, unknown>[]).slice(0, resultLimit).flatMap<Candidate>(item => {
       if (!item || typeof item !== 'object') return []
@@ -214,10 +217,20 @@ Also research the appropriate publicly listed business contact (for example proc
         const index = cursor++
         const business = candidates[index]
         if (targetContact && (business.publicEmail || business.publicPhone)) {
-          enriched[index] = business
+          if (business.publicEmail && business.publicPhone) { enriched[index] = business; continue }
+          const contacts = await researchBusinessContacts(business.website, business.businessName, [], contactDeadline)
+          enriched[index] = { ...business,
+            publicEmail: business.publicEmail || contacts.publicEmail,
+            publicPhone: business.publicPhone || contacts.publicPhone,
+            emailSourceUrl: business.publicEmail ? business.emailSourceUrl || business.contactSourceUrl : contacts.emailSourceUrl,
+            phoneSourceUrl: business.publicPhone ? business.phoneSourceUrl || business.contactSourceUrl : contacts.phoneSourceUrl,
+            generalPhone: !business.publicPhone && Boolean(contacts.publicPhone),
+            generalEmail: !business.publicEmail && Boolean(contacts.publicEmail),
+            contactLookupMessage: contacts.contactLookupMessage,
+          }
           continue
         }
-        const contacts = await extractWebsiteContacts(business.website, business.contactSourceUrl ? [business.contactSourceUrl] : [], contactDeadline)
+        const contacts = await researchBusinessContacts(business.website, business.businessName, business.contactSourceUrl ? [business.contactSourceUrl] : [], contactDeadline)
         if (targetContact) {
           enriched[index] = { ...business, ...contacts,
             contactName: '', contactJobTitle: '', contactDepartment: '', personSourceUrl: '',
@@ -236,7 +249,7 @@ Also research the appropriate publicly listed business contact (for example proc
         enriched[index] = { ...business, ...contacts, publicEmail, publicPhone, emailSourceUrl, phoneSourceUrl,
           contactSourceUrl: emailSourceUrl || phoneSourceUrl,
           contactLookupStatus: publicEmail && publicPhone ? 'FOUND' : publicEmail || publicPhone ? 'PARTIAL' : contacts.contactLookupStatus,
-          contactLookupMessage: publicEmail && publicPhone ? 'Published email and phone found on official business pages.' : contacts.contactLookupMessage,
+          contactLookupMessage: contacts.usedSearchIndex ? contacts.contactLookupMessage : publicEmail && publicPhone ? 'Published email and phone found on official business pages.' : contacts.contactLookupMessage,
         }
       }
     }))

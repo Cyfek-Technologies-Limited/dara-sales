@@ -4,6 +4,7 @@ import { salesStageLabel as stageLabel } from '@/lib/sales-stage-label'
 
 import ProspectStatusEditor from '@/components/prospect-status-editor'
 import RemoveProspectButton from '@/components/remove-prospect-button'
+import FindMissingPhones from '@/components/find-missing-phones'
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -69,7 +70,7 @@ export default function AdminLeadsList({ leads, emptyMessage = 'Saved and resear
     const id = selected.id
     contactLookup.current = true; setCheckingContacts(true); setContactFeedback(null)
     try {
-      const response = await fetch(`/api/admin/leads/${encodeURIComponent(id)}/contacts`, { method: 'POST', signal: AbortSignal.timeout(25000) })
+      const response = await fetch(`/api/admin/leads/${encodeURIComponent(id)}/contacts`, { method: 'POST', signal: AbortSignal.timeout(55000) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not check contacts.')
       setContactFeedback({ id, message: result.message }); router.refresh()
@@ -81,6 +82,7 @@ export default function AdminLeadsList({ leads, emptyMessage = 'Saved and resear
   const sourceLinks = [...new Set((selected?.source?.match(/https?:\/\/[^\s|]+/g) || []).map(webUrl).filter((url): url is string => Boolean(url)))]
 
   return <>
+    <FindMissingPhones prospects={visibleLeads.filter(lead => !lead.phone && lead.website)} />
     {visibleLeads.length ? <div className="divide-y divide-black/30">{visibleLeads.map((lead) => <div key={lead.id} className="grid w-full gap-3 px-5 py-4 text-left transition hover:bg-violet-50 focus-visible:bg-violet-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-violet-600 sm:grid-cols-[minmax(0,1.5fr)_minmax(120px,.75fr)_minmax(130px,.8fr)_minmax(130px,.8fr)] sm:items-center">
       <button type="button" onClick={() => openLead(lead)} aria-haspopup="dialog" aria-label={`View details for ${lead.businessName}`} className="flex min-w-0 items-center gap-3 text-left"><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-800"><Building2 className="size-4" /></span><span className="min-w-0"><span className="block truncate font-serif text-sm font-semibold">{lead.businessName}</span><span className="mt-1 block truncate text-[11px] text-slate-600">{lead.contactName || 'Contact not added'}{lead.industry ? ` / ${lead.industry}` : ''}{lead.email ? ` / ${lead.email}` : ''}</span><span className="mt-1 block text-[10px] font-medium text-violet-700">View full prospect details</span></span></button>
       <span><span className="rounded-full bg-violet-100 px-3 py-1.5 text-[10px] font-semibold text-violet-900">{contactLabel(lead.contactStatus)}</span></span>

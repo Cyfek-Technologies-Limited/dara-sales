@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   if (duplicate) return NextResponse.json({ error: 'This business is already in your prospect pipeline.' }, { status: 409 })
 
   const leadId = crypto.randomUUID()
-  const generalContactNote = body.generalCompanyContact === true ? ' | Contact type: general company inbox / phone' : ''
+  const generalContactNote = body.generalCompanyContact === true ? ' | Contact type: general company inbox / phone' : body.usedSearchIndex === true ? ' | Contact details found in search-indexed company pages; review sources.' : ''
   const teamSource = teamSourceValid && contactDepartment ? ` | ${groupInbox ? 'Group inbox' : body.inboxScope === 'DEPARTMENT' ? 'Department inbox' : 'Team'} source: ${teamSourceUrl}` : ''
   try {
     await prepareEmailAutomation(admin.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))

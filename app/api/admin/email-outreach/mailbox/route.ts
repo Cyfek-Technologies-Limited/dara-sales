@@ -23,15 +23,20 @@ export async function POST(request: Request) {
     try {
       await client.query('BEGIN')
       await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`outreach:${admin.organization.id}`])
-      if ((await client.query('SELECT 1 FROM "EmailAutomation" WHERE "organizationId" = $1 AND "enabled" = TRUE', [admin.organization.id])).rows.length) throw new Error('active')
+      // A new mailbox can be added while outreach runs. Only changing the
+      // credentials of the mailbox currently sending requires a pause.
+      if ((await client.query(`SELECT 1 FROM "EmailAutomation" a
+        JOIN "OrganizationEmailSender" s ON s."id" = a."senderId" AND s."organizationId" = a."organizationId"
+        WHERE a."organizationId" = $1 AND a."enabled" = TRUE AND s."email" = $2`, [admin.organization.id, email])).rows.length) throw new Error('active')
       await client.query(`INSERT INTO "OrganizationEmailSender" ("id", "organizationId", "providerAccountId", "email", "verifiedAt", "smtpHost", "smtpPort", "smtpUsername", "smtpPassword", "senderName")
         VALUES ($1,$2,$3,$4,NOW(),$5,$6,$4,$7,$8) ON CONFLICT ("providerAccountId") DO UPDATE SET
         "smtpHost"=$5,"smtpPort"=$6,"smtpUsername"=$4,"smtpPassword"=$7,"senderName"=$8,"verifiedAt"=NOW()
         WHERE "OrganizationEmailSender"."organizationId" = $2`, [randomUUID(), admin.organization.id, `smtp:${admin.organization.id}:${email}`, email, smtpHost, smtpPort, encrypted, senderName])
       await client.query('COMMIT')
     } catch (error) { await client.query('ROLLBACK'); throw error } finally { client.release() }
-    return NextResponse.json({ ok: true, message: 'Business mailbox connected. Select it below and approve your message to start sending.' })
-  } catch {
-    return NextResponse.json({ error: 'Could not connect. Pause active outreach, check the public SMTP host, port 465/587, email, and SMTP/app password. Your provider must allow SMTP sign-in.' }, { status: 400 })
+    return NextResponse.json({ ok: true, message: 'Mailbox connected. Your other mailboxes are still available. Choose your sender under Send from; adding a mailbox does not switch an active campaign.' })
+  } catch (error) {
+    if (error instanceof Error && error.message === 'active') return NextResponse.json({ error: 'Pause outreach before updating credentials for the mailbox currently sending. You can add a different mailbox without pausing.' }, { status: 409 })
+    return NextResponse.json({ error: 'Could not connect. Check the public SMTP host, port 465/587, email, and SMTP/app password. Your provider must allow SMTP sign-in.' }, { status: 400 })
   }
 }

@@ -24,7 +24,7 @@ export async function GET() {
         WHERE j."organizationId" = $1 ORDER BY j."updatedAt" DESC LIMIT 50`, [id]),
       reader.query('SELECT "status", COUNT(*)::int AS "count" FROM "VisibleEmailSyncJob" WHERE "organizationId" = $1 GROUP BY "status"', [id]),
       reader.query('SELECT "subject", "message", "companyAddress", "industryId", "senderId", "enabled", "status", "attachments" FROM "EmailAutomation" WHERE "organizationId" = $1', [id]),
-      reader.query('SELECT "id", "email" FROM "OrganizationEmailSender" WHERE "organizationId" = $1 AND "smtpPassword" IS NOT NULL ORDER BY "email"', [id]),
+      reader.query('SELECT "id", "email", "senderName" FROM "OrganizationEmailSender" WHERE "organizationId" = $1 AND "smtpPassword" IS NOT NULL ORDER BY "email"', [id]),
       reader.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 ORDER BY "name"', [id]),
       reader.query('SELECT "form" FROM "ProspectingPreference" WHERE "organizationId" = $1 AND "authUserId" = $2', [id, admin.user.id]),
     ])
