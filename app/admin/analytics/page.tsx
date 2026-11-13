@@ -1,3 +1,4 @@
+import { workspaceReader } from '@/lib/workspace-reader'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -58,39 +59,40 @@ export default async function AnalyticsPage() {
      WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
   )).rows[0]
   if (!organization) redirect('/onboarding')
+  const reader = workspaceReader(organization, session.user.id)
 
   const [industryRows, categoryRows, totalsRows, activityRows] = await Promise.all([
-    pool.query(
+    reader.query(
       `SELECT i."id", i."name",
         COUNT(l."id") FILTER (WHERE l."stage" = 'LEAD')::int AS leads,
         COUNT(l."id") FILTER (WHERE l."stage" = 'PROSPECT')::int AS prospects,
         COUNT(l."id") FILTER (WHERE l."stage" IN ('CLIENT','ONBOARDED','CAMPAIGN_SUCCESSFUL'))::int AS clients
-       FROM "Industry" i LEFT JOIN "SalesLead" l ON l."organizationId" = i."organizationId" AND (
+       FROM "Industry" i LEFT JOIN "VisibleSalesLead" l ON l."organizationId" = i."organizationId" AND (
          l."industry" = i."name" OR EXISTS (SELECT 1 FROM "IndustryCategory" c WHERE c."id" = l."industryCategoryId" AND c."industryId" = i."id")
        ) WHERE i."organizationId" = $1 GROUP BY i."id", i."name" ORDER BY clients DESC, prospects DESC, i."name"`, [organization.id],
     ),
-    pool.query(
+    reader.query(
       `SELECT c."id", c."name", i."name" AS "industryName",
         COUNT(l."id") FILTER (WHERE l."stage" = 'LEAD')::int AS leads,
         COUNT(l."id") FILTER (WHERE l."stage" = 'PROSPECT')::int AS prospects,
         COUNT(l."id") FILTER (WHERE l."stage" IN ('CLIENT','ONBOARDED','CAMPAIGN_SUCCESSFUL'))::int AS clients
        FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId"
-       LEFT JOIN "SalesLead" l ON l."industryCategoryId" = c."id" AND l."organizationId" = i."organizationId"
+       LEFT JOIN "VisibleSalesLead" l ON l."industryCategoryId" = c."id" AND l."organizationId" = i."organizationId"
        WHERE i."organizationId" = $1 GROUP BY c."id", c."name", i."name" ORDER BY clients DESC, prospects DESC, c."name"`, [organization.id],
     ),
-    pool.query(
+    reader.query(
       `SELECT COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE "stage" = 'LEAD')::int AS leads,
         COUNT(*) FILTER (WHERE "stage" = 'PROSPECT')::int AS prospects,
         COUNT(*) FILTER (WHERE "stage" IN ('CLIENT','ONBOARDED','CAMPAIGN_SUCCESSFUL'))::int AS clients
-       FROM "SalesLead" WHERE "organizationId" = $1`, [organization.id],
+       FROM "VisibleSalesLead" WHERE "organizationId" = $1`, [organization.id],
     ),
-    pool.query(
+    reader.query(
       `SELECT TO_CHAR(m.month, 'Mon') AS label,
         COALESCE(l.leads, 0)::int AS leads, COALESCE(o.outreach, 0)::int AS outreach
        FROM GENERATE_SERIES(DATE_TRUNC('month', NOW()) - INTERVAL '5 months', DATE_TRUNC('month', NOW()), INTERVAL '1 month') m(month)
-       LEFT JOIN (SELECT DATE_TRUNC('month', "createdAt") AS month, COUNT(*) AS leads FROM "SalesLead" WHERE "organizationId" = $1 GROUP BY 1) l ON l.month = m.month
-       LEFT JOIN (SELECT DATE_TRUNC('month', "occurredAt") AS month, COUNT(*) AS outreach FROM "SalesOutreach" WHERE "organizationId" = $1 GROUP BY 1) o ON o.month = m.month
+       LEFT JOIN (SELECT DATE_TRUNC('month', "createdAt") AS month, COUNT(*) AS leads FROM "VisibleSalesLead" WHERE "organizationId" = $1 GROUP BY 1) l ON l.month = m.month
+       LEFT JOIN (SELECT DATE_TRUNC('month', "occurredAt") AS month, COUNT(*) AS outreach FROM "VisibleSalesOutreach" WHERE "organizationId" = $1 GROUP BY 1) o ON o.month = m.month
        ORDER BY m.month`, [organization.id],
     ),
   ])

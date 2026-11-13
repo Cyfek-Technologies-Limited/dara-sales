@@ -1,3 +1,4 @@
+import { workspaceReader } from '@/lib/workspace-reader'
 import { NextResponse } from 'next/server'
 import { getWorkspaceSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
@@ -6,6 +7,7 @@ import { smtpReady } from '@/lib/smtp-mailbox'
 export async function GET(request: Request) {
   const admin = await getWorkspaceSession()
   if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
+  const reader = workspaceReader(admin.organization, admin.user.id)
   const params = new URL(request.url).searchParams
   const page = Math.max(1, Math.min(100000, Number(params.get('page')) || 1)) | 0
   const search = (params.get('search') || '').trim().slice(0, 160)
@@ -13,27 +15,27 @@ export async function GET(request: Request) {
   if (!['ALL','QUEUED','SENDING','SENT','FAILED','UNKNOWN','SKIPPED','CANCELLED'].includes(filter)) return NextResponse.json({ error: 'Invalid status filter.' }, { status: 400 })
   try {
     const id = admin.organization.id
-    const automation = (await pool.query(`SELECT a."campaignId", a."enabled", a."status", a."subject", s."email" AS "senderEmail"
+    const automation = (await reader.query(`SELECT a."campaignId", a."enabled", a."status", a."subject", s."email" AS "senderEmail"
       FROM "EmailAutomation" a LEFT JOIN "OrganizationEmailSender" s ON s."id" = a."senderId" AND s."organizationId" = a."organizationId"
       WHERE a."organizationId" = $1`, [id])).rows[0]
     const campaign = automation?.campaignId || ''
     const [counts, activity, timing, current, next] = await Promise.all([
-      pool.query(`SELECT "status", COUNT(*)::int AS count FROM "EmailSyncJob" WHERE "organizationId" = $1 AND "campaignId" = $2 GROUP BY "status"`, [id, campaign]),
-      pool.query(`SELECT j."id", j."email", j."status", j."lastError", j."sentAt", j."updatedAt", l."contactName", l."businessName", l."phone", l."contactJobTitle", l."contactDepartment", COUNT(*) OVER()::int AS "totalRows"
-        FROM "EmailSyncJob" j JOIN "SalesLead" l ON l."id" = j."leadId" AND l."organizationId" = j."organizationId"
+      reader.query(`SELECT "status", COUNT(*)::int AS count FROM "VisibleEmailSyncJob" WHERE "organizationId" = $1 AND "campaignId" = $2 GROUP BY "status"`, [id, campaign]),
+      reader.query(`SELECT j."id", j."email", j."status", j."lastError", j."sentAt", j."updatedAt", l."contactName", l."businessName", l."phone", l."contactJobTitle", l."contactDepartment", COUNT(*) OVER()::int AS "totalRows"
+        FROM "VisibleEmailSyncJob" j JOIN "VisibleSalesLead" l ON l."id" = j."leadId" AND l."organizationId" = j."organizationId"
         WHERE j."organizationId" = $1 AND j."campaignId" = $2 AND ($3 = 'ALL' OR j."status" = $3)
         AND ($4 = '' OR STRPOS(LOWER(CONCAT_WS(' ',l."businessName",l."contactName",j."email",l."phone")),LOWER($4)) > 0)
         ORDER BY CASE WHEN j."status" = 'SENDING' THEN 0 WHEN j."status" = 'QUEUED' THEN 2 ELSE 1 END,
         j."updatedAt" DESC, j."id" LIMIT 25 OFFSET $5`, [id, campaign, filter, search, (page - 1) * 25]),
-      pool.query(`SELECT COUNT(*) FILTER (WHERE "sentAt" > NOW() - INTERVAL '24 hours')::int AS "sentToday",
+      reader.query(`SELECT COUNT(*) FILTER (WHERE "sentAt" > NOW() - INTERVAL '24 hours')::int AS "sentToday",
         MIN("sentAt") FILTER (WHERE "sentAt" > NOW() - INTERVAL '24 hours') AS "firstSentToday",
         MAX("updatedAt") FILTER (WHERE "attempts" > 0) AS "lastAttemptAt"
-        FROM "EmailSyncJob" WHERE "organizationId" = $1`, [id]),
-      pool.query(`SELECT j."email", l."businessName", l."contactName" FROM "EmailSyncJob" j
-        JOIN "SalesLead" l ON l."id" = j."leadId" AND l."organizationId" = j."organizationId"
+        FROM "VisibleEmailSyncJob" WHERE "organizationId" = $1`, [id]),
+      reader.query(`SELECT j."email", l."businessName", l."contactName" FROM "VisibleEmailSyncJob" j
+        JOIN "VisibleSalesLead" l ON l."id" = j."leadId" AND l."organizationId" = j."organizationId"
         WHERE j."organizationId" = $1 AND j."campaignId" = $2 AND j."status" = 'SENDING' LIMIT 1`, [id, campaign]),
-      pool.query(`SELECT j."email", j."availableAt", l."businessName", l."contactName" FROM "EmailSyncJob" j
-        JOIN "SalesLead" l ON l."id" = j."leadId" AND l."organizationId" = j."organizationId"
+      reader.query(`SELECT j."email", j."availableAt", l."businessName", l."contactName" FROM "VisibleEmailSyncJob" j
+        JOIN "VisibleSalesLead" l ON l."id" = j."leadId" AND l."organizationId" = j."organizationId"
         WHERE j."organizationId" = $1 AND j."campaignId" = $2 AND j."status" = 'QUEUED'
         ORDER BY j."createdAt", j."id" LIMIT 1`, [id, campaign]),
     ])

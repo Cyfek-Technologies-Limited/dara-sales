@@ -11,7 +11,7 @@ export async function getEmailServerConfig(organizationId: string, database: Pic
 }
 export const prepareEmailAutomation = getEmailServerConfig
 
-export async function queueSavedLeads(organizationId?: string) {
+export async function queueSavedLeads(organizationId?: string, ownerId?: string) {
   await pool.query(`INSERT INTO "EmailSyncJob" ("id", "organizationId", "leadId", "email", "campaignId")
     SELECT gen_random_uuid()::text, candidate."organizationId", candidate."leadId", candidate."email", candidate."campaignId"
     FROM (
@@ -23,6 +23,7 @@ export async function queueSavedLeads(organizationId?: string) {
       JOIN "OrganizationEmailSender" s ON s."id" = a."senderId" AND s."organizationId" = a."organizationId"
       LEFT JOIN "IndustryCategory" c ON c."id" = l."industryCategoryId"
       WHERE ($1::text IS NULL OR l."organizationId" = $1) AND a."enabled" AND a."status" = 'READY'
+        AND ($2::text IS NULL OR l."ownerId" = $2)
         AND a."campaignId" LIKE 'smtp:%' AND s."smtpPassword" IS NOT NULL AND l."stage" = 'LEAD'
         AND (a."industryId" IS NULL OR c."industryId" = a."industryId")
         AND LENGTH(TRIM(l."email")) <= 254 AND TRIM(l."email") ~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'
@@ -30,22 +31,24 @@ export async function queueSavedLeads(organizationId?: string) {
     ) candidate WHERE TRUE
     ON CONFLICT ("organizationId", "email") DO UPDATE SET "campaignId" = EXCLUDED."campaignId", "leadId" = EXCLUDED."leadId",
       "status" = 'QUEUED', "lastError" = NULL, "availableAt" = NOW(), "lockedUntil" = NULL, "updatedAt" = NOW()
-    WHERE "EmailSyncJob"."status" = 'CANCELLED' AND "EmailSyncJob"."attempts" = 0`, [organizationId || null])
+    WHERE "EmailSyncJob"."status" = 'CANCELLED' AND "EmailSyncJob"."attempts" = 0`, [organizationId || null, ownerId || null])
 }
 
-export async function processEmailQueue(organizationId?: string) {
+export async function processEmailQueue(organizationId?: string, ownerId?: string) {
   if (!smtpReady() || process.env.EMAIL_AUTOMATION_ENABLED === 'false') return 0
-  await queueSavedLeads(organizationId)
+  await queueSavedLeads(organizationId, ownerId)
   // Never automatically resend an interrupted SMTP delivery: acceptance may already have occurred.
   await pool.query(`UPDATE "EmailSyncJob" SET "status" = 'UNKNOWN', "lastError" = 'Sending was interrupted; check the mailbox before sending again.'
-    WHERE "status" = 'SENDING' AND "lockedUntil" < NOW() AND ($1::text IS NULL OR "organizationId" = $1)`, [organizationId || null])
+    WHERE "status" = 'SENDING' AND "lockedUntil" < NOW() AND ($1::text IS NULL OR "organizationId" = $1)
+    AND ($2::text IS NULL OR EXISTS (SELECT 1 FROM "SalesLead" l WHERE l."id" = "EmailSyncJob"."leadId" AND l."organizationId" = "EmailSyncJob"."organizationId" AND l."ownerId" = $2))`, [organizationId || null, ownerId || null])
   const organizations = (await pool.query(`SELECT a."organizationId" FROM "EmailAutomation" a
     JOIN "EmailSyncJob" j ON j."organizationId" = a."organizationId" AND j."campaignId" = a."campaignId"
     WHERE a."enabled" = TRUE AND a."campaignId" LIKE 'smtp:%' AND j."status" = 'QUEUED' AND j."availableAt" <= NOW()
     AND ($1::text IS NULL OR a."organizationId" = $1)
+    AND ($2::text IS NULL OR EXISTS (SELECT 1 FROM "SalesLead" l WHERE l."id" = j."leadId" AND l."organizationId" = j."organizationId" AND l."ownerId" = $2))
     AND NOT EXISTS (SELECT 1 FROM "EmailSyncJob" r WHERE r."organizationId" = a."organizationId" AND r."attempts" > 0 AND r."updatedAt" > NOW() - INTERVAL '1 minute')
     AND (SELECT COUNT(*) FROM "EmailSyncJob" d WHERE d."organizationId" = a."organizationId" AND d."sentAt" > NOW() - INTERVAL '24 hours') < 30
-    GROUP BY a."organizationId" ORDER BY MIN(j."createdAt") LIMIT 1`, [organizationId || null])).rows
+    GROUP BY a."organizationId" ORDER BY MIN(j."createdAt") LIMIT 1`, [organizationId || null, ownerId || null])).rows
   let processed = 0
   for (const organization of organizations) {
     const client = await pool.connect()
@@ -66,7 +69,9 @@ export async function processEmailQueue(organizationId?: string) {
       const job = (await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SENDING', "attempts" = "attempts" + 1, "lastError" = NULL,
         "lockedUntil" = NOW() + INTERVAL '2 minutes', "updatedAt" = NOW()
         WHERE "id" = (SELECT "id" FROM "EmailSyncJob" WHERE "organizationId" = $1 AND "campaignId" = $2
-        AND "status" = 'QUEUED' AND "availableAt" <= NOW() ORDER BY "createdAt" LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *`, [organization.organizationId, config.campaignId])).rows[0]
+        AND "status" = 'QUEUED' AND "availableAt" <= NOW()
+        AND ($3::text IS NULL OR EXISTS (SELECT 1 FROM "SalesLead" l WHERE l."id" = "EmailSyncJob"."leadId" AND l."organizationId" = $1 AND l."ownerId" = $3))
+        ORDER BY "createdAt" LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *`, [organization.organizationId, config.campaignId, ownerId || null])).rows[0]
       if (!job) continue
       await client.query('COMMIT'); transactionOpen = false
       let sending = false

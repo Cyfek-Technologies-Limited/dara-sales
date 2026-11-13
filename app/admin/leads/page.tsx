@@ -1,3 +1,4 @@
+import { workspaceReader } from '@/lib/workspace-reader'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -15,17 +16,18 @@ export default async function AdminLeadsPage() {
   if (!session?.user) redirect('/sign-in')
   const organization = (await pool.query(`SELECT m."role", o."id", o."name" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId"=o."id" WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id])).rows[0]
   if (!organization) redirect('/onboarding')
-  const leads: AdminLead[] = (await pool.query(
+  const reader = workspaceReader(organization, session.user.id)
+  const leads: AdminLead[] = (await reader.query(
     `SELECT l."id",l."businessName",l."contactName",l."email",l."phone",l."industry",c."name" AS "categoryName",l."website",l."source",l."notes",l."createdAt",l."updatedAt",l."stage",l."advertiserSpend"::text AS "advertiserSpend",u."name" AS "ownerName",u."email" AS "ownerEmail",o."channel",o."occurredAt"
-     FROM "SalesLead" l LEFT JOIN "user" u ON u."id"=l."ownerId"
+     FROM "VisibleSalesLead" l LEFT JOIN "user" u ON u."id"=l."ownerId"
      LEFT JOIN "IndustryCategory" c ON c."id"=l."industryCategoryId"
-     LEFT JOIN LATERAL (SELECT "channel","occurredAt" FROM "SalesOutreach" WHERE "leadId"=l."id" ORDER BY "occurredAt" DESC LIMIT 1) o ON true
+     LEFT JOIN LATERAL (SELECT "channel","occurredAt" FROM "VisibleSalesOutreach" WHERE "leadId"=l."id" ORDER BY "occurredAt" DESC LIMIT 1) o ON true
      WHERE l."organizationId"=$1 ORDER BY l."updatedAt" DESC`, [organization.id],
   )).rows.map((lead: LeadRow) => ({ ...lead, createdAt: lead.createdAt.toISOString(), updatedAt: lead.updatedAt.toISOString(), occurredAt: lead.occurredAt?.toISOString() || null }))
   const [industryRows, categoryRows, teammateRows] = await Promise.all([
-    pool.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 ORDER BY "name"', [organization.id]),
-    pool.query(`SELECT c."id", c."name", c."industryId" FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId" WHERE i."organizationId" = $1 ORDER BY c."name"`, [organization.id]),
-    pool.query(`SELECT m."authUserId" AS "id", u."name", u."email" FROM "OrganizationMember" m JOIN "user" u ON u."id" = m."authUserId" WHERE m."organizationId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE' ORDER BY u."name", u."email"`, [organization.id]),
+    reader.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 ORDER BY "name"', [organization.id]),
+    reader.query(`SELECT c."id", c."name", c."industryId" FROM "IndustryCategory" c JOIN "Industry" i ON i."id" = c."industryId" WHERE i."organizationId" = $1 ORDER BY c."name"`, [organization.id]),
+    reader.query(`SELECT m."authUserId" AS "id", u."name", u."email" FROM "OrganizationMember" m JOIN "user" u ON u."id" = m."authUserId" WHERE m."organizationId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE' ORDER BY u."name", u."email"`, [organization.id]),
   ])
   const byStage = leads.reduce((counts, lead) => ({ ...counts, [lead.stage]: (counts[lead.stage] || 0) + 1 }), {} as Record<string, number>)
 

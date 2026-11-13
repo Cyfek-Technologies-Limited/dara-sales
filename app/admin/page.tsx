@@ -1,3 +1,4 @@
+import { workspaceReader } from '@/lib/workspace-reader'
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -20,13 +21,14 @@ export default async function AdminDashboard() {
     )
   ).rows[0];
   if (!organization) redirect("/onboarding");
+  const reader = workspaceReader(organization, session.user.id)
 
   const [staffResult, stagesResult, outreachResult, recentResult, activityResult, emailResult] =
     await Promise.all([
-      pool.query(
+      reader.query(
         `SELECT m."authUserId", m."jobTitle", u."name", u."email",
-        (SELECT COUNT(*)::int FROM "SalesLead" l WHERE l."organizationId"=m."organizationId" AND l."ownerId"=m."authUserId") AS "leadCount",
-        (SELECT COUNT(*)::int FROM "SalesOutreach" s WHERE s."organizationId"=m."organizationId" AND s."ownerId"=m."authUserId"
+        (SELECT COUNT(*)::int FROM "VisibleSalesLead" l WHERE l."organizationId"=m."organizationId" AND l."ownerId"=m."authUserId") AS "leadCount",
+        (SELECT COUNT(*)::int FROM "VisibleSalesOutreach" s WHERE s."organizationId"=m."organizationId" AND s."ownerId"=m."authUserId"
           AND s."occurredAt">=(DATE_TRUNC('day',NOW() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos')
           AND s."occurredAt"<((DATE_TRUNC('day',NOW() AT TIME ZONE 'Africa/Lagos')+INTERVAL '1 day') AT TIME ZONE 'Africa/Lagos')) AS "outreachToday"
        FROM "OrganizationMember" m JOIN "user" u ON u."id"=m."authUserId"
@@ -34,38 +36,38 @@ export default async function AdminDashboard() {
        ORDER BY "outreachToday" DESC, "leadCount" DESC LIMIT 5`,
         [organization.id]
       ),
-      pool.query(
+      reader.query(
         `SELECT COUNT(*) FILTER (WHERE "stage"='LEAD')::int AS lead,
               COUNT(*) FILTER (WHERE "stage"='PROSPECT')::int AS prospect,
               COUNT(*) FILTER (WHERE "stage"='CLIENT')::int AS client,
               COUNT(*) FILTER (WHERE "stage"='ONBOARDED')::int AS onboarded,
               COUNT(*) FILTER (WHERE "stage"='CAMPAIGN_SUCCESSFUL')::int AS successful,
               COUNT(*)::int AS total
-       FROM "SalesLead" WHERE "organizationId"=$1`,
+       FROM "VisibleSalesLead" WHERE "organizationId"=$1`,
         [organization.id]
       ),
-      pool.query(
-        `SELECT COUNT(*)::int AS count FROM "SalesOutreach" WHERE "organizationId"=$1
+      reader.query(
+        `SELECT COUNT(*)::int AS count FROM "VisibleSalesOutreach" WHERE "organizationId"=$1
        AND "occurredAt">=(DATE_TRUNC('day',NOW() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos')
        AND "occurredAt"<((DATE_TRUNC('day',NOW() AT TIME ZONE 'Africa/Lagos')+INTERVAL '1 day') AT TIME ZONE 'Africa/Lagos')`,
         [organization.id]
       ),
-      pool.query(
+      reader.query(
         `SELECT l."id", l."businessName", l."contactName", l."industry", l."stage", u."name" AS "ownerName", u."email" AS "ownerEmail", o."channel" AS "outreachChannel", o."occurredAt" AS "outreachAt"
-       FROM "SalesLead" l LEFT JOIN "user" u ON u."id"=l."ownerId"
-       LEFT JOIN LATERAL (SELECT "channel","occurredAt" FROM "SalesOutreach" WHERE "leadId"=l."id" ORDER BY "occurredAt" DESC LIMIT 1) o ON true
+       FROM "VisibleSalesLead" l LEFT JOIN "user" u ON u."id"=l."ownerId"
+       LEFT JOIN LATERAL (SELECT "channel","occurredAt" FROM "VisibleSalesOutreach" WHERE "leadId"=l."id" ORDER BY "occurredAt" DESC LIMIT 1) o ON true
        WHERE l."organizationId"=$1 ORDER BY l."createdAt" DESC LIMIT 4`,
         [organization.id]
       ),
-      pool.query(
+      reader.query(
         `WITH days AS (SELECT generate_series((NOW() AT TIME ZONE 'Africa/Lagos')::date - 6, (NOW() AT TIME ZONE 'Africa/Lagos')::date, INTERVAL '1 day') AS day)
          SELECT TO_CHAR(days.day, 'Dy') AS label, COUNT(l."id")::int AS leads
-         FROM days LEFT JOIN "SalesLead" l ON l."organizationId"=$1
+         FROM days LEFT JOIN "VisibleSalesLead" l ON l."organizationId"=$1
            AND (l."createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Lagos')::date = days.day::date
          GROUP BY days.day ORDER BY days.day`, [organization.id]
       ),
-      pool.query(
-        `SELECT COUNT(*)::int AS count FROM "EmailSyncJob" WHERE "organizationId" = $1 AND "status" = 'SENT'`, [organization.id]
+      reader.query(
+        `SELECT COUNT(*)::int AS count FROM "VisibleEmailSyncJob" WHERE "organizationId" = $1 AND "status" = 'SENT'`, [organization.id]
       ),
     ]);
 
@@ -83,7 +85,7 @@ export default async function AdminDashboard() {
   const totalLeads = Number(stageRow.total);
   const activeStaff = Number(
     (
-      await pool.query(
+      await reader.query(
         `SELECT COUNT(*)::int AS count FROM "OrganizationMember" WHERE "organizationId"=$1 AND "role"='STAFF' AND "status"='ACTIVE'`,
         [organization.id]
       )

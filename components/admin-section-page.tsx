@@ -1,3 +1,4 @@
+import { workspaceReader } from '@/lib/workspace-reader'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { CalendarDays, CheckCircle2, ClipboardList, CircleHelp, Settings, TrendingUp, Users } from 'lucide-react'
@@ -25,17 +26,18 @@ export async function AdminSectionPage({ section }: { section: keyof typeof cont
   const result = await pool.query(`SELECT m."role", o."id", o."name", o."staffCount", o."plan" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id" WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' LIMIT 1`, [session.user.id])
   const organization = result.rows[0]
   if (!organization) redirect('/onboarding')
+  const reader = workspaceReader(organization, session.user.id)
   const page = content[section]
   const Icon = page.icon
-  const team = section === 'team' ? (await pool.query(
+  const team = section === 'team' ? (await reader.query(
     `SELECT m."authUserId", m."jobTitle", u."name", u."email",
-       (SELECT COUNT(*)::int FROM "SalesOutreach" s WHERE s."organizationId" = m."organizationId" AND s."ownerId" = m."authUserId" AND s."occurredAt" >= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos') AND s."occurredAt" < ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') + INTERVAL '1 day') AT TIME ZONE 'Africa/Lagos')) AS "outreachToday",
-       (SELECT COUNT(*)::int FROM "SalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId") AS "leadCount",
-       (SELECT COUNT(*)::int FROM "SalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'PROSPECT') AS prospects,
-       (SELECT COUNT(*)::int FROM "SalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'CLIENT') AS clients,
-       (SELECT COUNT(*)::int FROM "SalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'ONBOARDED') AS onboarded,
-       (SELECT COUNT(*)::int FROM "SalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'CAMPAIGN_SUCCESSFUL') AS successful,
-       (SELECT COALESCE(SUM(l."advertiserSpend"),0)::text FROM "SalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'CAMPAIGN_SUCCESSFUL') AS spend
+       (SELECT COUNT(*)::int FROM "VisibleSalesOutreach" s WHERE s."organizationId" = m."organizationId" AND s."ownerId" = m."authUserId" AND s."occurredAt" >= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos') AND s."occurredAt" < ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') + INTERVAL '1 day') AT TIME ZONE 'Africa/Lagos')) AS "outreachToday",
+       (SELECT COUNT(*)::int FROM "VisibleSalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId") AS "leadCount",
+       (SELECT COUNT(*)::int FROM "VisibleSalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'PROSPECT') AS prospects,
+       (SELECT COUNT(*)::int FROM "VisibleSalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'CLIENT') AS clients,
+       (SELECT COUNT(*)::int FROM "VisibleSalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'ONBOARDED') AS onboarded,
+       (SELECT COUNT(*)::int FROM "VisibleSalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'CAMPAIGN_SUCCESSFUL') AS successful,
+       (SELECT COALESCE(SUM(l."advertiserSpend"),0)::text FROM "VisibleSalesLead" l WHERE l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."stage" = 'CAMPAIGN_SUCCESSFUL') AS spend
      FROM "OrganizationMember" m JOIN "user" u ON u."id" = m."authUserId"
      WHERE m."organizationId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE' ORDER BY "outreachToday" DESC, "leadCount" DESC`,
     [organization.id],

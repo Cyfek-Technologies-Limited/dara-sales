@@ -1,3 +1,4 @@
+import { workspaceReader } from '@/lib/workspace-reader'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
@@ -17,19 +18,20 @@ export default async function IndustriesPage() {
     [session.user.id],
   )).rows[0]
   if (!organization) redirect('/onboarding')
+  const reader = workspaceReader(organization, session.user.id)
 
   const [industryResult, categoryResult, teammateResult] = await Promise.all([
-    pool.query(
+    reader.query(
       `SELECT i."id", i."name",
               COUNT(DISTINCT l."id") FILTER (WHERE l."stage" = 'PROSPECT')::int AS "prospectCount",
               COUNT(DISTINCT l."id") FILTER (WHERE l."stage" = 'CLIENT')::int AS "clientCount"
        FROM "Industry" i
-       LEFT JOIN "SalesLead" l ON l."organizationId" = i."organizationId" AND l."industry" = i."name"
+       LEFT JOIN "VisibleSalesLead" l ON l."organizationId" = i."organizationId" AND l."industry" = i."name"
        WHERE i."organizationId" = $1
        GROUP BY i."id", i."name" ORDER BY i."name"`,
       [organization.id],
     ),
-    pool.query(
+    reader.query(
       `SELECT c."id", c."industryId", c."name", i."name" AS "industryName",
               COUNT(DISTINCT l."id") FILTER (WHERE l."stage" = 'PROSPECT')::int AS "prospectCount",
               COUNT(DISTINCT l."id") FILTER (WHERE l."stage" = 'CLIENT')::int AS "clientCount",
@@ -37,8 +39,8 @@ export default async function IndustriesPage() {
               COUNT(DISTINCT m."authUserId")::int AS "assignedInterns"
        FROM "IndustryCategory" c
        JOIN "Industry" i ON i."id" = c."industryId"
-       LEFT JOIN "SalesLead" l ON l."industryCategoryId" = c."id" AND l."organizationId" = $1
-       LEFT JOIN "SalesOutreach" s ON s."leadId" = l."id"
+       LEFT JOIN "VisibleSalesLead" l ON l."industryCategoryId" = c."id" AND l."organizationId" = $1
+       LEFT JOIN "VisibleSalesOutreach" s ON s."leadId" = l."id"
          AND s."occurredAt" >= (DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') AT TIME ZONE 'Africa/Lagos')
          AND s."occurredAt" < ((DATE_TRUNC('day', NOW() AT TIME ZONE 'Africa/Lagos') + INTERVAL '1 day') AT TIME ZONE 'Africa/Lagos')
        LEFT JOIN "OrganizationMember" m ON m."industryId" = i."id" AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
@@ -47,13 +49,13 @@ export default async function IndustriesPage() {
        ORDER BY i."name", c."name"`,
       [organization.id],
     ),
-    pool.query(
+    reader.query(
       `SELECT m."authUserId" AS "userId", u."name", u."email", m."jobTitle", m."industryId", i."name" AS "industryName",
               COUNT(DISTINCT l."id") FILTER (WHERE l."stage" = 'CLIENT')::int AS "clientCount"
        FROM "OrganizationMember" m
        JOIN "user" u ON u."id" = m."authUserId"
        LEFT JOIN "Industry" i ON i."id" = m."industryId"
-       LEFT JOIN "SalesLead" l ON l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."industry" = i."name"
+       LEFT JOIN "VisibleSalesLead" l ON l."organizationId" = m."organizationId" AND l."ownerId" = m."authUserId" AND l."industry" = i."name"
        WHERE m."organizationId" = $1 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'
        GROUP BY m."authUserId", u."name", u."email", m."jobTitle", m."industryId", i."name"
        ORDER BY i."name" NULLS FIRST, u."name"`,

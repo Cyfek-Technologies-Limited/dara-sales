@@ -1,3 +1,4 @@
+import { workspaceReader } from '@/lib/workspace-reader'
 import { after, NextResponse } from 'next/server'
 import { getWorkspaceSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
@@ -12,18 +13,19 @@ export const maxDuration = 120
 export async function GET() {
   const admin = await getWorkspaceSession()
   if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
+  const reader = workspaceReader(admin.organization, admin.user.id)
   try {
     const id = admin.organization.id
     const config = await getEmailServerConfig(id)
     const [jobs, counts, profile, senders, industries, preferences] = await Promise.all([
-      pool.query(`SELECT j."id", j."email", j."status", j."lastError", l."businessName"
-        FROM "EmailSyncJob" j JOIN "SalesLead" l ON l."id" = j."leadId"
+      reader.query(`SELECT j."id", j."email", j."status", j."lastError", l."businessName"
+        FROM "VisibleEmailSyncJob" j JOIN "VisibleSalesLead" l ON l."id" = j."leadId"
         WHERE j."organizationId" = $1 ORDER BY j."updatedAt" DESC LIMIT 50`, [id]),
-      pool.query('SELECT "status", COUNT(*)::int AS "count" FROM "EmailSyncJob" WHERE "organizationId" = $1 GROUP BY "status"', [id]),
-      pool.query('SELECT "subject", "message", "companyAddress", "industryId", "senderId", "enabled", "status" FROM "EmailAutomation" WHERE "organizationId" = $1', [id]),
-      pool.query('SELECT "id", "email" FROM "OrganizationEmailSender" WHERE "organizationId" = $1 AND "smtpPassword" IS NOT NULL ORDER BY "email"', [id]),
-      pool.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 ORDER BY "name"', [id]),
-      pool.query('SELECT "form" FROM "ProspectingPreference" WHERE "organizationId" = $1 AND "authUserId" = $2', [id, admin.user.id]),
+      reader.query('SELECT "status", COUNT(*)::int AS "count" FROM "VisibleEmailSyncJob" WHERE "organizationId" = $1 GROUP BY "status"', [id]),
+      reader.query('SELECT "subject", "message", "companyAddress", "industryId", "senderId", "enabled", "status" FROM "EmailAutomation" WHERE "organizationId" = $1', [id]),
+      reader.query('SELECT "id", "email" FROM "OrganizationEmailSender" WHERE "organizationId" = $1 AND "smtpPassword" IS NOT NULL ORDER BY "email"', [id]),
+      reader.query('SELECT "id", "name" FROM "Industry" WHERE "organizationId" = $1 ORDER BY "name"', [id]),
+      reader.query('SELECT "form" FROM "ProspectingPreference" WHERE "organizationId" = $1 AND "authUserId" = $2', [id, admin.user.id]),
     ])
     // Never return credentials, environment values or campaign routing to clients.
     const saved = cleanProspectingDraft(preferences.rows[0]?.form)
@@ -69,12 +71,13 @@ export async function POST(request: Request) {
   if (request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   const body = await request.json().catch(() => ({}))
   const id = admin.organization.id
+  const ownerId = admin.organization.role === 'STAFF' ? admin.user.id : null
   try {
     if (body.action === 'process') {
       const config = await getEmailServerConfig(id)
       if (!config) return NextResponse.json({ error: 'The sending configuration is incomplete. Pause outreach, reconnect the selected SMTP mailbox, and activate again.' }, { status: 409 })
       if (!config.enabled) return NextResponse.json({ error: 'Sending is paused or disabled in the platform configuration.' }, { status: 409 })
-      const processed = await processEmailQueue(id)
+      const processed = await processEmailQueue(id, ownerId || undefined)
       return NextResponse.json({ ok: true, processed }, { headers: { 'Cache-Control': 'no-store' } })
     }
     if (body.action === 'save' || body.action === 'activate') {
@@ -82,8 +85,8 @@ export async function POST(request: Request) {
       await saveProfile(id, body)
       if (body.action === 'activate') {
         await activateOrganizationCampaign(id, body)
-        await queueSavedLeads(id)
-        after(() => processEmailQueue(id).then(() => {}).catch(() => console.error('[email] Background sync failed')))
+        await queueSavedLeads(id, ownerId || undefined)
+        after(() => processEmailQueue(id, ownerId || undefined).then(() => {}).catch(() => console.error('[email] Background sync failed')))
       }
       return NextResponse.json({ ok: true, message: body.action === 'activate' ? 'Your organization\'s outreach is active. Matching prospects will join automatically.' : 'Your organization\'s message and audience have been saved.' })
     }
@@ -95,15 +98,17 @@ export async function POST(request: Request) {
     const config = await getEmailServerConfig(id)
     if (!config?.enabled) return NextResponse.json({ error: 'Activate your organization\'s outreach first.' }, { status: 409 })
     await pool.query(`UPDATE "EmailSyncJob" SET "status" = 'QUEUED', "attempts" = 0, "availableAt" = NOW(), "lastError" = NULL,
-      "updatedAt" = NOW() WHERE "organizationId" = $1 AND "campaignId" = $2 AND "status" = 'FAILED'`, [id, config.campaignId])
-    after(() => processEmailQueue(id).then(() => {}).catch(() => console.error('[email] Background sync failed')))
+      "updatedAt" = NOW() WHERE "organizationId" = $1 AND "campaignId" = $2 AND "status" = 'FAILED'
+      AND ($3::text IS NULL OR EXISTS (SELECT 1 FROM "SalesLead" l WHERE l."id" = "EmailSyncJob"."leadId" AND l."organizationId" = $1 AND l."ownerId" = $3))`, [id, config.campaignId, ownerId])
+    after(() => processEmailQueue(id, ownerId || undefined).then(() => {}).catch(() => console.error('[email] Background sync failed')))
     return NextResponse.json({ ok: true, message: 'Failed contacts will be retried automatically.' })
   } catch (error) {
     const code = (error as { code?: string })?.code
     console.error('[email] Outreach request failed', { action: body.action, code: typeof code === 'string' ? code : 'UNEXPECTED_ERROR' })
     if (body.action === 'process') {
       await pool.query(`UPDATE "EmailSyncJob" SET "lastError" = 'The queue worker failed before sending. Check the deployment logs or retry processing.'
-        WHERE "organizationId" = $1 AND "status" = 'QUEUED'`, [id]).catch(() => {})
+        WHERE "organizationId" = $1 AND "status" = 'QUEUED'
+        AND ($2::text IS NULL OR EXISTS (SELECT 1 FROM "SalesLead" l WHERE l."id" = "EmailSyncJob"."leadId" AND l."organizationId" = $1 AND l."ownerId" = $2))`, [id, ownerId]).catch(() => {})
     }
     return NextResponse.json({ error: body.action === 'process' ? 'The email queue worker could not run. Please retry; if it persists, check the server logs for the outreach error code.' : error instanceof SmtpError ? error.message : 'Could not update your outreach. Check that the latest database migration has been applied.' }, { status: 502 })
   }
