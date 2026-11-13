@@ -18,7 +18,7 @@ export default async function AdminLeadsPage() {
   if (!organization) redirect('/onboarding')
   const reader = workspaceReader(organization, session.user.id)
   const leads: AdminLead[] = (await reader.query(
-    `SELECT l."id",l."businessName",l."contactName",l."email",l."phone",l."industry",c."name" AS "categoryName",l."website",l."source",l."notes",l."createdAt",l."updatedAt",l."stage",l."advertiserSpend"::text AS "advertiserSpend",u."name" AS "ownerName",u."email" AS "ownerEmail",o."channel",o."occurredAt"
+    `SELECT l."id",l."businessName",l."contactName",l."email",l."phone",l."industry",c."name" AS "categoryName",l."website",l."source",l."notes",l."createdAt",l."updatedAt",l."stage",l."contactStatus",l."responseText",l."advertiserSpend"::text AS "advertiserSpend",u."name" AS "ownerName",u."email" AS "ownerEmail",o."channel",o."occurredAt"
      FROM "VisibleSalesLead" l LEFT JOIN "user" u ON u."id"=l."ownerId"
      LEFT JOIN "IndustryCategory" c ON c."id"=l."industryCategoryId"
      LEFT JOIN LATERAL (SELECT "channel","occurredAt" FROM "VisibleSalesOutreach" WHERE "leadId"=l."id" ORDER BY "occurredAt" DESC LIMIT 1) o ON true

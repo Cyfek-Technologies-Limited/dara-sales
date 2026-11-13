@@ -8,6 +8,7 @@ export function attachmentMetadata(files: EmailAttachment[]) {
 }
 
 export function resolveAttachments(input: unknown, saved: EmailAttachment[]): EmailAttachment[] {
+  if (input == null) return []
   if (!Array.isArray(input) || input.length > 3) throw new Error('Choose up to 3 attachments, totalling no more than 2 MB.')
   const files = input.map((value: unknown) => {
     if (!value || typeof value !== 'object') throw new Error('Invalid attachment.')
@@ -33,4 +34,19 @@ export function resolveAttachments(input: unknown, saved: EmailAttachment[]): Em
   })
   if (new Set(files.map(file => file.id)).size !== files.length || files.reduce((total, file) => total + file.size, 0) > MAX_ATTACHMENT_BYTES) throw new Error('Attachments must total no more than 2 MB, without duplicates.')
   return files
+}
+
+export function optionalSendingAttachments(input: unknown) {
+  const files: EmailAttachment[] = []
+  let skipped = input != null && !Array.isArray(input)
+  if (Array.isArray(input)) {
+    for (const value of input) {
+      try {
+        const [file] = resolveAttachments([value], [])
+        if (files.length >= 3 || files.reduce((total, item) => total + item.size, 0) + file.size > MAX_ATTACHMENT_BYTES) { skipped = true; continue }
+        files.push(file)
+      } catch { skipped = true }
+    }
+  }
+  return { files, skipped }
 }

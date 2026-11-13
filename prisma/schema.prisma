@@ -182,6 +182,8 @@ model StaffPerformance {
 }
 
 model SalesLead {
+  contactStatus        String         @default("PROSPECT")
+  responseText         String?
   id                   String         @id @default(cuid())
   organizationId       String
   ownerId              String?

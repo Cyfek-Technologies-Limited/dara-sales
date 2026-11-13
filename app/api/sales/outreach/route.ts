@@ -27,6 +27,6 @@ export async function POST(request: Request) {
     `INSERT INTO "SalesOutreach" ("id", "organizationId", "leadId", "ownerId", "channel", "platform", "note", "outcome") VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [crypto.randomUUID(), member.organizationId, lead.id, session.user.id, channel, body.platform || null, body.note || null, body.outcome || null],
   )
-  await pool.query(`UPDATE "SalesLead" SET "updatedAt" = NOW() WHERE "id" = $1`, [lead.id])
+  await pool.query(`UPDATE "SalesLead" SET "contactStatus" = CASE WHEN "contactStatus" = 'PROSPECT' THEN 'CONTACTED' ELSE "contactStatus" END, "updatedAt" = NOW() WHERE "id" = $1`, [lead.id])
   return NextResponse.json({ ok: true }, { status: 201 })
 }
