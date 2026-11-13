@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function ProspectStatusEditor({ id, businessName, initialStatus, initialResponse }: { id: string; businessName: string; initialStatus: string; initialResponse: string | null }) {
+export default function ProspectStatusEditor({ id, businessName, initialStatus, initialResponse, action }: { id: string; businessName: string; initialStatus: string; initialResponse: string | null; action?: ReactNode }) {
   const router = useRouter()
   const [status, setStatus] = useState(initialStatus)
   const [response, setResponse] = useState(initialResponse || '')
@@ -23,8 +23,8 @@ export default function ProspectStatusEditor({ id, businessName, initialStatus, 
     finally { lock.current = false; setBusy(false) }
   }
   return <div className="min-w-40 space-y-2 text-xs">
-    <label className="block font-semibold">Status<select aria-label={`Status for ${businessName}`} value={status} disabled={busy} onChange={event => { setStatus(event.target.value); setFeedback('') }} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm"><option value="PROSPECT">Prospect</option><option value="CONTACTED">Contacted</option><option value="RESPONSE">Response</option></select></label>
-    {status === 'RESPONSE' && <label className="block font-semibold">What was their response?<textarea maxLength={2000} value={response} disabled={busy} onChange={event => { setResponse(event.target.value); setFeedback('') }} placeholder="Record what the prospect said…" className="mt-1 min-h-20 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>}
+    <div className="flex items-center justify-between gap-2"><label htmlFor={`prospect-status-${id}`} className="font-semibold">Status</label>{action}</div><select id={`prospect-status-${id}`} aria-label={`Status for ${businessName}`} value={status} disabled={busy} onChange={event => { setStatus(event.target.value); setFeedback('') }} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm"><option value="PROSPECT">Prospect</option><option value="CONTACTED">Contacted</option><option value="ACCEPTED">Accepted</option><option value="REJECTED">Rejected</option><option value="RESPONSE">Response</option></select>
+    {status === 'RESPONSE' && <label className="block font-semibold">Reason / response<textarea maxLength={2000} value={response} disabled={busy} onChange={event => { setResponse(event.target.value); setFeedback('') }} placeholder="Record their response when they have not accepted or rejected…" className="mt-1 min-h-20 w-full rounded-lg border border-slate-300 bg-white p-2 font-normal" /></label>}
     {(changed || status === 'RESPONSE' && !initialResponse) && <button type="button" onClick={save} disabled={busy || status === 'RESPONSE' && !response.trim()} className="rounded-lg bg-[#0b1f3a] px-3 py-2 font-semibold text-white disabled:opacity-50">{busy ? 'Saving…' : 'Save status'}</button>}
     {feedback && <p role="status" className="break-words text-slate-600">{feedback}</p>}
   </div>

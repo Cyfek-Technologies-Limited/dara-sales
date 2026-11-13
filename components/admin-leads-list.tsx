@@ -32,7 +32,7 @@ export type AdminLead = {
   updatedAt: string
 }
 
-const contactLabel = (status: string) => status === 'RESPONSE' ? 'Response' : status === 'CONTACTED' ? 'Contacted' : 'Prospect'
+const contactLabel = (status: string) => status === 'ACCEPTED' ? 'Accepted' : status === 'REJECTED' ? 'Rejected' : status === 'RESPONSE' ? 'Response' : status === 'CONTACTED' ? 'Contacted' : 'Prospect'
 const dateLabel = (value: string | null) => value ? new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lagos' }).format(new Date(value)) : 'Not recorded'
 
 function webUrl(value: string | null) {
@@ -85,7 +85,7 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
       <button type="button" onClick={() => openLead(lead)} aria-haspopup="dialog" aria-label={`View details for ${lead.businessName}`} className="flex min-w-0 items-center gap-3 text-left"><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-800"><Building2 className="size-4" /></span><span className="min-w-0"><span className="block truncate font-serif text-sm font-semibold">{lead.businessName}</span><span className="mt-1 block truncate text-[11px] text-slate-600">{lead.contactName || 'Contact not added'}{lead.industry ? ` / ${lead.industry}` : ''}{lead.email ? ` / ${lead.email}` : ''}</span><span className="mt-1 block text-[10px] font-medium text-violet-700">View full prospect details</span></span></button>
       <span><span className="rounded-full bg-violet-100 px-3 py-1.5 text-[10px] font-semibold text-violet-900">{contactLabel(lead.contactStatus)}</span></span>
       <span className="text-xs"><span className="block font-medium">{lead.ownerName || lead.ownerEmail || 'Unassigned'}</span><span className="mt-1 block text-[10px] text-slate-600">{lead.channel ? stageLabel(lead.channel) : 'No contact logged'}</span></span>
-      <div className="space-y-3"><ProspectStatusEditor key={`${lead.id}:${lead.contactStatus}:${lead.responseText || ""}`} id={lead.id} businessName={lead.businessName} initialStatus={lead.contactStatus} initialResponse={lead.responseText} /><RemoveProspectButton id={lead.id} businessName={lead.businessName} onRemoved={() => prospectRemoved(lead.id)} /></div>
+      <ProspectStatusEditor key={`${lead.id}:${lead.contactStatus}:${lead.responseText || ""}`} id={lead.id} businessName={lead.businessName} initialStatus={lead.contactStatus} initialResponse={lead.responseText} action={<RemoveProspectButton id={lead.id} businessName={lead.businessName} onRemoved={() => prospectRemoved(lead.id)} />} />
     </div>)}</div> : <p className="p-12 text-center text-sm text-slate-600">Saved and researched prospects will appear here. Click a prospect to view its details.</p>}
 
     <dialog ref={dialog} aria-labelledby="lead-details-title" onClose={() => setSelected(null)} onClick={(event) => { if (event.target === event.currentTarget) dialog.current?.close() }} className="m-auto max-h-[85dvh] w-[92vw] max-w-2xl overflow-y-auto rounded-2xl border-[1px] border-black/30 bg-white p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm">

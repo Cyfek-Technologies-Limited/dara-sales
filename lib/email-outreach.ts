@@ -26,7 +26,7 @@ export async function queueSavedLeads(organizationId?: string, ownerId?: string)
       WHERE ($1::text IS NULL OR l."organizationId" = $1) AND a."enabled" AND a."status" = 'READY'
         AND ($2::text IS NULL OR l."ownerId" = $2)
         AND a."campaignId" LIKE 'smtp:%' AND s."smtpPassword" IS NOT NULL AND l."stage" = 'LEAD'
-        AND l."contactStatus" <> 'RESPONSE'
+        AND l."contactStatus" IN ('PROSPECT','CONTACTED')
         AND (a."industryId" IS NULL OR c."industryId" = a."industryId")
         AND LENGTH(TRIM(l."email")) <= 254 AND TRIM(l."email") ~ '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'
       ORDER BY l."organizationId", LOWER(TRIM(l."email")), l."createdAt", l."id"
@@ -81,7 +81,7 @@ export async function processEmailQueue(organizationId?: string, ownerId?: strin
         const lead = (await client.query(`SELECT l.*, c."industryId" AS "leadIndustryId" FROM "SalesLead" l
           LEFT JOIN "IndustryCategory" c ON c."id" = l."industryCategoryId" WHERE l."id" = $1 AND l."organizationId" = $2`, [job.leadId, job.organizationId])).rows[0]
         const suppressed = (await client.query('SELECT 1 FROM "EmailSuppression" WHERE "organizationId" = $1 AND "email" = $2', [job.organizationId, job.email])).rows.length
-        if (suppressed || !lead || lead.stage !== 'LEAD' || lead.contactStatus === 'RESPONSE' || lead.email?.trim().toLowerCase() !== job.email || config.industryId && config.industryId !== lead.leadIndustryId) {
+        if (suppressed || !lead || lead.stage !== 'LEAD' || !['PROSPECT','CONTACTED'].includes(lead.contactStatus) || lead.email?.trim().toLowerCase() !== job.email || config.industryId && config.industryId !== lead.leadIndustryId) {
           await client.query(`UPDATE "EmailSyncJob" SET "status" = 'SKIPPED', "lockedUntil" = NULL, "updatedAt" = NOW() WHERE "id" = $1`, [job.id]); continue
         }
         const transport = await smtpTransport(config)

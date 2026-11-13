@@ -7,7 +7,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (!member) return NextResponse.json({ error: 'Sign in first.' }, { status: 401 })
   if (request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   const body = await request.json().catch(() => null)
-  if (!body || !['PROSPECT','CONTACTED','RESPONSE'].includes(body.status)
+  if (!body || !['PROSPECT','CONTACTED','ACCEPTED','REJECTED','RESPONSE'].includes(body.status)
     || (body.responseText != null && typeof body.responseText !== 'string')) return NextResponse.json({ error: 'Choose a valid status.' }, { status: 400 })
   const responseText = (body.responseText || '').trim()
   if (responseText.length > 2000 || (body.status === 'RESPONSE' && !responseText)) return NextResponse.json({ error: 'Enter the response (up to 2,000 characters).' }, { status: 400 })

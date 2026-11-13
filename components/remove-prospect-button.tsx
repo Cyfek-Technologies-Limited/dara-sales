@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { LoaderCircle, Trash2 } from 'lucide-react'
 
 export default function RemoveProspectButton({ id, businessName, onRemoved }: { id: string; businessName: string; onRemoved: () => void }) {
   const router = useRouter()
@@ -19,5 +20,5 @@ export default function RemoveProspectButton({ id, businessName, onRemoved }: { 
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not remove prospect.') }
     finally { pending.current = false; setBusy(false) }
   }
-  return <div><button type="button" disabled={busy} onClick={remove} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60">{busy ? 'Removing…' : 'Remove prospect'}</button>{error && <p role="alert" className="mt-2 max-w-xs text-xs leading-5 text-red-800">{error}</p>}</div>
+  return <div className="relative shrink-0"><button type="button" disabled={busy} onClick={remove} aria-label={`Remove ${businessName}`} title={busy ? 'Removing prospect…' : 'Remove prospect'} className="inline-flex size-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 disabled:opacity-50">{busy ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}</button>{error && <p role="alert" className="absolute right-0 top-full z-10 mt-1 w-60 rounded-lg border border-red-200 bg-white p-3 text-xs leading-5 text-red-800 shadow-md">{error}</p>}</div>
 }
