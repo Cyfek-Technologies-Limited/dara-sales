@@ -31,19 +31,19 @@ export async function GET() {
     // Never return credentials, environment values or campaign routing to clients.
     const saved = cleanProspectingDraft(preferences.rows[0]?.form)
     const businessDescription = saved.offering || (/^(https?:\/\/|www\.)|^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(saved.businessInput.trim()) ? '' : saved.businessInput)
-    return NextResponse.json({ businessDescription, mailboxConnectionAvailable: smtpReady(), automation: { configured: Boolean(config), enabled: Boolean(config?.enabled) }, profile: profile.rows[0] ? { ...profile.rows[0], attachments: attachmentMetadata(profile.rows[0].attachments || []) } : null, senders: senders.rows, industries: industries.rows, jobs: jobs.rows, counts: counts.rows })
+    return NextResponse.json({ businessDescription, mailboxConnectionAvailable: smtpReady(), automation: { configured: Boolean(config), enabled: Boolean(config?.enabled) }, profile: profile.rows[0] ? { ...profile.rows[0], attachments: attachmentMetadata(profile.rows[0].attachments || []) } : null, senders: senders.rows, industries: industries.rows, jobs: jobs.rows, counts: counts.rows }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     return NextResponse.json({ error: 'Outreach activity is temporarily unavailable. Please try again shortly.' }, { status: 503 })
   }
 }
 
-async function saveProfile(organizationId: string, body: Record<string, unknown>) {
+async function saveProfile(organizationId: string, body: Record<string, unknown>, activating: boolean) {
   const subject = typeof body.subject === 'string' ? body.subject.trim() : ''
   const message = typeof body.message === 'string' ? body.message.trim() : ''
   const companyAddress = typeof body.companyAddress === 'string' ? body.companyAddress.trim() : ''
   const industryId = typeof body.industryId === 'string' && body.industryId ? body.industryId : null
   const senderId = typeof body.senderId === 'string' && body.senderId ? body.senderId : null
-  if (!subject || subject.length > 200 || /[\r\n]/.test(subject) || !message || message.length > 10000 || !companyAddress || companyAddress.length > 500) throw new SmtpError('Enter a subject, email message, and company address within the field limits.')
+  if (!subject || subject.length > 200 || /[\r\n]/.test(subject) || !message || message.length > 10000 || (activating && !companyAddress) || companyAddress.length > 500) throw new SmtpError(activating ? 'Enter a subject, email message, and company address within the field limits.' : 'Enter a subject and email message within the field limits.')
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -88,13 +88,13 @@ export async function POST(request: Request) {
     }
     if (body.action === 'save' || body.action === 'activate') {
       if (body.action === 'activate' && body.confirmed !== true) throw new SmtpError('Review and approve your organization\'s message before activating outreach.')
-      const attachmentIds = await saveProfile(id, body)
+      const attachmentIds = await saveProfile(id, body, body.action === 'activate')
       if (body.action === 'activate') {
         await activateOrganizationCampaign(id, { ...body, attachmentIds })
         await queueSavedLeads(id, ownerId || undefined)
         after(() => processEmailQueue(id, ownerId || undefined).then(() => {}).catch(() => console.error('[email] Background sync failed')))
       }
-      return NextResponse.json({ ok: true, message: body.action === 'activate' ? 'Your organization\'s outreach is active. Matching prospects will join automatically.' : 'Your organization\'s message and audience have been saved.' })
+      return NextResponse.json({ ok: true, message: body.action === 'activate' ? 'Your organization\'s outreach is active. Matching prospects will join automatically.' : 'Message saved. It will be restored when you refresh or return.' })
     }
     if (body.action === 'pause') {
       await pauseOrganizationCampaign(id)
