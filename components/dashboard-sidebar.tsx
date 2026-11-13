@@ -85,7 +85,7 @@ export function DashboardSidebar({
     </aside>
     <header className="dashboard-topbar">
       <div className="flex min-w-0 items-center gap-3"><button type="button" className="dashboard-mobile-toggle" aria-label="Open navigation" aria-expanded={mobileOpen} aria-controls="dashboard-navigation" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button><div className="min-w-0"><p className="dashboard-topbar-eyebrow">YOUR WORKSPACE</p><p className="truncate text-sm font-medium">{currentPage}</p></div></div>
-      <div className="dashboard-profile"><span className="dashboard-profile-avatar">{initials}</span><div className="hidden min-w-0 sm:block"><p className="max-w-60 truncate text-sm font-medium">{userName}</p><p className="max-w-60 truncate text-[11px] text-[#8c8694]" title={userEmail}>{role === 'ADMIN' ? 'Administrator' : jobTitle || 'Sales team member'}</p></div><span className="dashboard-online-dot" aria-label="Signed in" /></div>
+      <div className="dashboard-profile"><span className="dashboard-profile-avatar">{initials}</span><div className="min-w-0"><p className="hidden max-w-60 truncate text-sm font-medium sm:block">{userName}</p><p className="max-w-[160px] truncate text-xs text-[#475569] sm:max-w-60" title={userEmail}>{userEmail}</p><p className="hidden max-w-60 truncate text-[11px] text-[#8c8694] sm:block">{role === 'ADMIN' ? 'Administrator' : jobTitle || 'Sales team member'}</p></div><span className="dashboard-online-dot" aria-label="Signed in" /></div>
     </header>
   </>
 }
