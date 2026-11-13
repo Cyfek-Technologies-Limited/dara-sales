@@ -3,6 +3,7 @@
 import { salesStageLabel as stageLabel } from '@/lib/sales-stage-label'
 
 import ProspectStatusEditor from '@/components/prospect-status-editor'
+import RemoveProspectButton from '@/components/remove-prospect-button'
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -44,6 +45,8 @@ function webUrl(value: string | null) {
 
 export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
   const router = useRouter()
+  const [removedIds, setRemovedIds] = useState<string[]>([])
+  const visibleLeads = leads.filter(lead => !removedIds.includes(lead.id))
   const contactLookup = useRef(false)
   const [checkingContacts, setCheckingContacts] = useState(false)
   const [contactFeedback, setContactFeedback] = useState<{ id: string; message: string } | null>(null)
@@ -54,6 +57,11 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
   function openLead(lead: AdminLead) {
     setSelected(lead)
     if (!dialog.current?.open) dialog.current?.showModal()
+  }
+
+  function prospectRemoved(id: string) {
+    setRemovedIds(current => [...current, id])
+    if (selected?.id === id) { dialog.current?.close(); setSelected(null) }
   }
 
   async function findContacts() {
@@ -73,11 +81,11 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
   const sourceLinks = [...new Set((selected?.source?.match(/https?:\/\/[^\s|]+/g) || []).map(webUrl).filter((url): url is string => Boolean(url)))]
 
   return <>
-    {leads.length ? <div className="divide-y divide-black/30">{leads.map((lead) => <div key={lead.id} className="grid w-full gap-3 px-5 py-4 text-left transition hover:bg-violet-50 focus-visible:bg-violet-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-violet-600 sm:grid-cols-[minmax(0,1.5fr)_minmax(120px,.75fr)_minmax(130px,.8fr)_minmax(130px,.8fr)] sm:items-center">
+    {visibleLeads.length ? <div className="divide-y divide-black/30">{visibleLeads.map((lead) => <div key={lead.id} className="grid w-full gap-3 px-5 py-4 text-left transition hover:bg-violet-50 focus-visible:bg-violet-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-violet-600 sm:grid-cols-[minmax(0,1.5fr)_minmax(120px,.75fr)_minmax(130px,.8fr)_minmax(130px,.8fr)] sm:items-center">
       <button type="button" onClick={() => openLead(lead)} aria-haspopup="dialog" aria-label={`View details for ${lead.businessName}`} className="flex min-w-0 items-center gap-3 text-left"><span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-800"><Building2 className="size-4" /></span><span className="min-w-0"><span className="block truncate font-serif text-sm font-semibold">{lead.businessName}</span><span className="mt-1 block truncate text-[11px] text-slate-600">{lead.contactName || 'Contact not added'}{lead.industry ? ` / ${lead.industry}` : ''}{lead.email ? ` / ${lead.email}` : ''}</span><span className="mt-1 block text-[10px] font-medium text-violet-700">View full prospect details</span></span></button>
       <span><span className="rounded-full bg-violet-100 px-3 py-1.5 text-[10px] font-semibold text-violet-900">{contactLabel(lead.contactStatus)}</span></span>
       <span className="text-xs"><span className="block font-medium">{lead.ownerName || lead.ownerEmail || 'Unassigned'}</span><span className="mt-1 block text-[10px] text-slate-600">{lead.channel ? stageLabel(lead.channel) : 'No contact logged'}</span></span>
-      <ProspectStatusEditor key={`${lead.id}:${lead.contactStatus}:${lead.responseText || ""}`} id={lead.id} businessName={lead.businessName} initialStatus={lead.contactStatus} initialResponse={lead.responseText} />
+      <div className="space-y-3"><ProspectStatusEditor key={`${lead.id}:${lead.contactStatus}:${lead.responseText || ""}`} id={lead.id} businessName={lead.businessName} initialStatus={lead.contactStatus} initialResponse={lead.responseText} /><RemoveProspectButton id={lead.id} businessName={lead.businessName} onRemoved={() => prospectRemoved(lead.id)} /></div>
     </div>)}</div> : <p className="p-12 text-center text-sm text-slate-600">Saved and researched prospects will appear here. Click a prospect to view its details.</p>}
 
     <dialog ref={dialog} aria-labelledby="lead-details-title" onClose={() => setSelected(null)} onClick={(event) => { if (event.target === event.currentTarget) dialog.current?.close() }} className="m-auto max-h-[85dvh] w-[92vw] max-w-2xl overflow-y-auto rounded-2xl border-[1px] border-black/30 bg-white p-0 text-slate-950 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm">
@@ -105,7 +113,7 @@ export default function AdminLeadsList({ leads }: { leads: AdminLead[] }) {
           {selected.responseText && <section className="rounded-xl border border-slate-300 bg-blue-50 p-4"><h3 className="text-sm font-semibold">Recorded response</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm">{selected.responseText}</p></section>}
           <section className="rounded-xl border-[1px] border-black/30 bg-slate-50 p-4"><h3 className="text-sm font-semibold">Notes</h3><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{selected.notes || 'No notes added.'}</p></section>
           <section><h3 className="text-sm font-semibold">Source</h3><p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-slate-600">{selected.source || 'No source recorded.'}</p>{sourceLinks.length > 0 && <ul className="mt-2 space-y-2">{sourceLinks.map((url) => <li key={url}><a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 break-all text-xs font-medium text-violet-700 underline">{url}<ExternalLink className="size-3 shrink-0" /></a></li>)}</ul>}</section>
-          <div className="flex justify-end border-t-[1px] border-black/30 pt-4"><button type="button" onClick={() => dialog.current?.close()} className="rounded-xl bg-violet-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 focus-visible:ring-4 focus-visible:ring-violet-200">Close</button></div>
+          <div className="flex flex-wrap items-start justify-between gap-3 border-t-[1px] border-black/30 pt-4"><RemoveProspectButton id={selected.id} businessName={selected.businessName} onRemoved={() => prospectRemoved(selected.id)} /><button type="button" onClick={() => dialog.current?.close()} className="rounded-xl bg-violet-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 focus-visible:ring-4 focus-visible:ring-violet-200">Close</button></div>
         </div>
       </div>}
     </dialog>
