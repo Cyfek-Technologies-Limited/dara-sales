@@ -1,7 +1,7 @@
 import { salesStageLabel as stageLabel } from '@/lib/sales-stage-label'
 const stageSteps = [
   { key: 'LEAD', label: 'Prospect' },
-  { key: 'PROSPECT', label: 'Lead' },
+  { key: 'PROSPECT', label: 'Qualified prospect' },
   { key: 'CLIENT', label: 'Client' },
   { key: 'ONBOARDED', label: 'Onboarded' },
   { key: 'CAMPAIGN_SUCCESSFUL', label: 'Campaign live' },

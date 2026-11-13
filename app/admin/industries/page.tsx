@@ -10,9 +10,9 @@ export default async function IndustriesPage() {
   if (!session?.user) redirect('/sign-in')
 
   const organization = (await pool.query(
-    `SELECT o."id", o."name" FROM "Organization" o
+    `SELECT m."role", o."id", o."name" FROM "Organization" o
      JOIN "OrganizationMember" m ON m."organizationId" = o."id"
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN'
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE'
      ORDER BY o."createdAt" DESC LIMIT 1`,
     [session.user.id],
   )).rows[0]
@@ -90,7 +90,7 @@ export default async function IndustriesPage() {
   return (
     <main className="dashboard-page min-h-screen bg-[#f4f6f9] p-3 text-[#30263f] md:p-4">
       <div className="dashboard-frame mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3">
-        <DashboardSidebar role="ADMIN" userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} />
+        <DashboardSidebar role={organization.role} userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} />
         <section className="dashboard-content min-w-0 flex-1 rounded-[26px] border-[1px] border-black/30 bg-[#fbfcfe] px-4 py-5 shadow-[0_10px_30px_rgba(7,18,31,0.04)] sm:px-7 md:py-7">
           <header className="border-b-[1px] border-black/30 pb-5">
             <p className="text-xs text-[#657286]">{organization.name} · Workspace</p>

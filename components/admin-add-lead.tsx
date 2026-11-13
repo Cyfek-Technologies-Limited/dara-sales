@@ -9,7 +9,7 @@ export type LeadCategory = { id: string; name: string; industryId: string }
 export type LeadTeammate = { id: string; name: string | null; email: string }
 const empty = { businessName: '', contactName: '', email: '', phone: '', website: '', industryId: '', categoryId: '', ownerId: '', source: '', notes: '' }
 
-export default function AdminAddLead({ industries, categories, teammates }: { industries: LeadIndustry[]; categories: LeadCategory[]; teammates: LeadTeammate[] }) {
+export default function AdminAddLead({ industries, categories, teammates, autoAssignUserId }: { industries: LeadIndustry[]; categories: LeadCategory[]; teammates: LeadTeammate[]; autoAssignUserId?: string }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const inFlight = useRef(false)
   const router = useRouter()
@@ -48,7 +48,7 @@ export default function AdminAddLead({ industries, categories, teammates }: { in
           <label className="text-sm font-semibold">Website<input maxLength={600} value={form.website} onChange={e => update('website', e.target.value)} className={field} placeholder="yourbusiness.com" /></label>
           <label className="text-sm font-semibold">Industry<select value={form.industryId} onChange={e => setForm(current => ({ ...current, industryId: e.target.value, categoryId: '' }))} className={field}><option value="">No industry selected</option>{industries.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label className="text-sm font-semibold">Category<select disabled={!form.industryId || busy} value={form.categoryId} onChange={e => update('categoryId', e.target.value)} className={field}><option value="">No category selected</option>{categories.filter(item => item.industryId === form.industryId).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <label className="text-sm font-semibold">Assign to teammate<select value={form.ownerId} onChange={e => update('ownerId', e.target.value)} className={field}><option value="">Unassigned</option>{teammates.map(item => <option key={item.id} value={item.id}>{item.name || item.email}</option>)}</select></label>
+          <label className="text-sm font-semibold">Assign to teammate<select disabled={Boolean(autoAssignUserId)} value={autoAssignUserId || form.ownerId} onChange={e => update('ownerId', e.target.value)} className={field}>{!autoAssignUserId && <option value="">Unassigned</option>}{teammates.map(item => <option key={item.id} value={item.id}>{item.name || item.email}</option>)}</select></label>
           <label className="text-sm font-semibold">Prospect source<input maxLength={600} value={form.source} onChange={e => update('source', e.target.value)} className={field} placeholder="Referral, event, website..." /></label>
           <label className="text-sm font-semibold sm:col-span-2">Notes<textarea maxLength={5000} value={form.notes} onChange={e => update('notes', e.target.value)} className={`${field} min-h-24`} /></label>
         </fieldset>

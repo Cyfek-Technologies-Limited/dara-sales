@@ -62,7 +62,7 @@ export default async function AllLeadsPage() {
           <header className="flex flex-col justify-between gap-4 border-b-[1px] border-black/30 pb-5 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs text-[#657286]">{member.organizationName} · {member.jobTitle || 'Sales team member'}</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">All prospects &amp; leads</h1>
+              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">All prospects</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#657286]">Your complete list of businesses, including prospects you contacted on earlier days.</p>
               <Link href="/dashboard/leads" className="mt-3 inline-block text-xs font-semibold underline">View today&apos;s prospects</Link>
             </div>

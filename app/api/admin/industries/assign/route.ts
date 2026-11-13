@@ -5,16 +5,16 @@ import { pool } from '@/lib/db'
 
 export async function PATCH(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) return NextResponse.json({ error: 'Sign in as an organization admin.' }, { status: 401 })
+  if (!session?.user) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
 
   const organization = (await pool.query(
     `SELECT o."id" FROM "Organization" o
      JOIN "OrganizationMember" m ON m."organizationId" = o."id"
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN'
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE'
      ORDER BY o."createdAt" DESC LIMIT 1`,
     [session.user.id],
   )).rows[0]
-  if (!organization) return NextResponse.json({ error: 'Admin workspace not found.' }, { status: 403 })
+  if (!organization) return NextResponse.json({ error: 'Active workspace not found.' }, { status: 403 })
 
   const body = await request.json().catch(() => ({}))
   const userId = typeof body.userId === 'string' ? body.userId : ''

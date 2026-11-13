@@ -19,13 +19,6 @@ const adminWorkspaceLinks = [
   { label: 'Industries', href: '/admin/industries', icon: Tags },
 ]
 
-const staffWorkspaceLinks = [
-  { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { label: "Today's prospects", href: '/dashboard/leads', icon: ContactRound },
-  { label: 'All prospects & leads', href: '/dashboard/leads/all', icon: Users },
-  { label: 'Pipeline', href: '/dashboard#pipeline', icon: Target },
-]
-
 const generalLinks = [
   { label: 'Settings', href: '/admin/settings', icon: Settings },
   { label: 'Help', href: '/admin/help', icon: CircleHelp },
@@ -50,7 +43,8 @@ export function DashboardSidebar({
   const [navSearch, setNavSearch] = useState('')
   const pathname = usePathname()
   const router = useRouter()
-  const workspaceLinks = role === 'ADMIN' ? adminWorkspaceLinks : staffWorkspaceLinks
+  const workspaceLinks = role === 'ADMIN' ? adminWorkspaceLinks : adminWorkspaceLinks.map(link => ({ ...link, href: link.href.replace('/admin', '/dashboard') }))
+  const visibleGeneralLinks = role === 'ADMIN' ? generalLinks : generalLinks.map(link => ({ ...link, href: link.href.replace('/admin', '/dashboard') }))
 
   async function signOut() {
     await authClient.signOut()
@@ -59,8 +53,8 @@ export function DashboardSidebar({
   }
 
   const initials = userName.trim().split(/\s+/).slice(0, 2).map((part) => part[0] || '').join('').toUpperCase()
-  const InviteIcon = pathname.startsWith('/admin/prospecting') ? Radar : Sparkles
-  const currentPage = [...workspaceLinks, ...generalLinks].find((link) => link.href === pathname)?.label || 'Workspace'
+  const InviteIcon = pathname.endsWith('/prospecting') ? Radar : Sparkles
+  const currentPage = [...workspaceLinks, ...visibleGeneralLinks].find((link) => link.href === pathname)?.label || 'Workspace'
   const shownLinks = workspaceLinks.filter((link) => link.label.toLowerCase().includes(navSearch.toLowerCase()))
 
   return <>
@@ -76,7 +70,7 @@ export function DashboardSidebar({
         })}
         {!shownLinks.length && <p className="px-6 py-4 text-xs text-white/70">No matching pages.</p>}
       </nav>
-      {role === 'ADMIN' && <nav aria-label="General navigation" className="dashboard-general-links">{generalLinks.map(({label, href, icon: Icon}) => <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined} className={`dashboard-nav-link ${pathname === href ? 'is-active' : ''}`}><Icon className="size-[21px] shrink-0" strokeWidth={1.6} /><span>{label}</span></Link>)}</nav>}
+      <nav aria-label="General navigation" className="dashboard-general-links">{visibleGeneralLinks.map(({label, href, icon: Icon}) => <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined} className={`dashboard-nav-link ${pathname === href ? 'is-active' : ''}`}><Icon className="size-[21px] shrink-0" strokeWidth={1.6} /><span>{label}</span></Link>)}</nav>
       <div className="dashboard-sidebar-footer">
         {role === 'STAFF' && <div className="mb-5 text-xs leading-5 text-white/70"><p className="font-semibold text-white">{jobTitle || 'Sales team'}</p><p>{industry || 'Industry not assigned'}</p></div>}
         {role === 'ADMIN' && <div className="dashboard-invite-panel"><InviteIcon className="mb-2 size-5 text-[#e3a7cc]" /><p className="text-sm font-semibold text-white">Better, together.</p><p className="mb-3 mt-1 text-xs leading-5 text-white/65">Bring your team into the conversation.</p><InviteLinkButton /></div>}

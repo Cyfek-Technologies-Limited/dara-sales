@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getAdminSession } from '@/lib/admin-session'
+import { getWorkspaceSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
 import { cleanProspectingDraft } from '@/lib/prospecting-draft'
 
 export async function POST(request: Request) {
-  const admin = await getAdminSession()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an active admin.' }, { status: 401 })
+  const admin = await getWorkspaceSession()
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   const body = await request.json().catch(() => null)
   if (!body?.form || typeof body.form !== 'object') return NextResponse.json({ error: 'Invalid prospecting preferences.' }, { status: 400 })
   try {

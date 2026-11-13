@@ -11,10 +11,10 @@ async function getAdmin() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) return null
   const organization = (await pool.query(
-    `SELECT o."id" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
+    `SELECT m."role", o."id" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
   )).rows[0]
-  return organization ? { organizationId: organization.id } : null
+  return organization ? { organizationId: organization.id, role: organization.role, userId: session.user.id } : null
 }
 
 function validWebUrl(value: unknown) {
@@ -28,7 +28,7 @@ function validWebUrl(value: unknown) {
 
 export async function POST(request: Request) {
   const admin = await getAdmin()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an organization admin.' }, { status: 401 })
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   const body = await request.json().catch(() => ({}))
   const businessName = typeof body.businessName === 'string' ? body.businessName.trim().slice(0, 160) : ''
   const summary = typeof body.summary === 'string' ? body.summary.trim().slice(0, 300) : ''
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
      WHERE m."authUserId" = $1 AND m."organizationId" = $2 AND m."role" = 'STAFF' AND m."status" = 'ACTIVE'`,
     [requestedOwnerId, admin.organizationId],
   )).rows[0] : null
-  const ownerId = owner?.authUserId || null
+  const ownerId = admin.role === 'STAFF' ? admin.userId : owner?.authUserId || null
   if (!category) return NextResponse.json({ error: 'Choose a valid industry category.' }, { status: 400 })
   if (email && !groupInbox && (!emailSourceUrl || !sameBusinessWebsite(emailSourceUrl, website!)) || phone && (!phoneSourceUrl || !sameBusinessWebsite(phoneSourceUrl, website!))) {
     return NextResponse.json({ error: 'Contact details need a source page on the business website.' }, { status: 400 })

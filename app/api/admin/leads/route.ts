@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { after, NextResponse } from 'next/server'
-import { getAdminSession } from '@/lib/admin-session'
+import { getWorkspaceSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
 import { processEmailQueue } from '@/lib/email-outreach'
 
 export const maxDuration = 60
 
 export async function POST(request: Request) {
-  const admin = await getAdminSession()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an active administrator.' }, { status: 401 })
+  const admin = await getWorkspaceSession()
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   if (request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   const body = await request.json().catch(() => null)
   if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Enter the prospect details.' }, { status: 400 })
@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     if (body[name] != null && (typeof body[name] !== 'string' || body[name].length > limit)) return NextResponse.json({ error: `Check the ${name} field and its length.` }, { status: 400 })
     fields[name] = (body[name] || '').trim()
   }
+  if (admin.organization.role === 'STAFF') fields.ownerId = admin.user.id
   if (!fields.businessName) return NextResponse.json({ error: 'Enter a business name.' }, { status: 400 })
   if (fields.email && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(fields.email)) return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 })
   if (fields.phone && (!/^[+\d(][\d\s().+-]+$/.test(fields.phone) || fields.phone.replace(/\D/g, '').length < 7 || fields.phone.replace(/\D/g, '').length > 15)) return NextResponse.json({ error: 'Enter a valid phone number, including its area or country code.' }, { status: 400 })

@@ -1,5 +1,5 @@
 import { after, NextResponse } from 'next/server'
-import { getAdminSession } from '@/lib/admin-session'
+import { getWorkspaceSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
 import { getEmailServerConfig, processEmailQueue, queueSavedLeads, SmtpError } from '@/lib/email-outreach'
 
@@ -10,8 +10,8 @@ import { cleanProspectingDraft } from '@/lib/prospecting-draft'
 export const maxDuration = 120
 
 export async function GET() {
-  const admin = await getAdminSession()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an active admin.' }, { status: 401 })
+  const admin = await getWorkspaceSession()
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   try {
     const id = admin.organization.id
     const config = await getEmailServerConfig(id)
@@ -64,8 +64,8 @@ async function saveProfile(organizationId: string, body: Record<string, unknown>
 }
 
 export async function POST(request: Request) {
-  const admin = await getAdminSession()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an active admin.' }, { status: 401 })
+  const admin = await getWorkspaceSession()
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   if (request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   const body = await request.json().catch(() => ({}))
   const id = admin.organization.id

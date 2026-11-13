@@ -12,7 +12,7 @@ async function getAdmin() {
   if (!session?.user) return null
   const organization = (await pool.query(
     `SELECT o."id" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
   )).rows[0]
   return organization ? { organizationId: organization.id } : null
 }
@@ -43,7 +43,7 @@ function sourceKey(value: string) {
 
 export async function POST(request: Request) {
   const admin = await getAdmin()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an organization admin.' }, { status: 401 })
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'Web prospect search is not configured. Add OPENAI_API_KEY to the server environment.' }, { status: 503 })
 
   const body = await request.json().catch(() => ({}))

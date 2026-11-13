@@ -15,7 +15,7 @@ type Business = { emailSourceUrl?: string; phoneSourceUrl?: string; contactLooku
 const fieldClassName = 'mt-1.5 w-full rounded-xl border-[1px] border-black/30 bg-white px-3.5 py-3 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-[#173b65] focus:ring-4 focus:ring-[#dbe5f0] disabled:cursor-wait'
 const categoryColors = ['bg-violet-100 text-violet-900', 'bg-cyan-100 text-cyan-900', 'bg-amber-100 text-amber-900', 'bg-rose-100 text-rose-900', 'bg-emerald-100 text-emerald-900', 'bg-[#dbe5f0] text-[#0b1f3a]']
 
-export default function ProspectingWorkbench({ categories, teammates, storageKey, initialDraft, draftUpdatedAt }: { categories: Category[]; teammates: Teammate[]; storageKey: string; initialDraft: ProspectingDraft; draftUpdatedAt: number }) {
+export default function ProspectingWorkbench({ categories, teammates, storageKey, initialDraft, draftUpdatedAt, autoAssignUserId }: { categories: Category[]; teammates: Teammate[]; storageKey: string; initialDraft: ProspectingDraft; draftUpdatedAt: number; autoAssignUserId?: string }) {
   const router = useRouter()
   const { form, update, status: draftStatus, ready } = useProspectingDraft(storageKey, initialDraft, draftUpdatedAt)
   const { offering, businessInput = offering || form.websiteUrl || '', location, categoryId, keywords, businessSize, contactPreference, exclusions, resultLimit, ownerId } = form
@@ -41,7 +41,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [websiteSources, setWebsiteSources] = useState<string[]>([])
-  const selectedOwnerId = teammates.some((teammate) => teammate.id === ownerId) ? ownerId : ''
+  const selectedOwnerId = autoAssignUserId || (teammates.some((teammate) => teammate.id === ownerId) ? ownerId : '')
 
   const isWebsiteInput = /^(?:https?:\/\/|www\.)\S+$/i.test(businessInput.trim()) || /^[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/?#]\S*)?$/i.test(businessInput.trim())
 
@@ -114,7 +114,7 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
       }
       if (!response.ok) throw new Error(data.error || 'Could not save this prospect.')
       const teammate = teammates.find(item => item.id === data.ownerId)
-      setLeadStatuses(current => ({ ...current, [key]: { kind: 'success', message: data.ownerId ? `Added to ${teammate?.name || teammate?.email || 'your teammate'}'s prospects.` : 'Saved to prospects as unassigned.' } }))
+      setLeadStatuses(current => ({ ...current, [key]: { kind: 'success', message: autoAssignUserId ? 'Added to your prospects.' : data.ownerId ? `Added to ${teammate?.name || teammate?.email || 'your teammate'}'s prospects.` : 'Saved to prospects as unassigned.' } }))
       return 'saved'
     } catch (cause) {
       const message = cause instanceof Error && cause.name === 'TimeoutError'
@@ -224,8 +224,8 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
             </select>
           </label>
           <label className="text-[13px] font-semibold text-slate-800">Assign saved prospects to (optional)
-            <select value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} className={fieldClassName}>
-              <option value="">Unassigned</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
+            <select disabled={Boolean(autoAssignUserId)} value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} className={fieldClassName}>
+              {!autoAssignUserId && <option value="">Unassigned</option>}{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
             </select>
           </label>
           <div className="sm:col-span-2">
@@ -244,10 +244,10 @@ export default function ProspectingWorkbench({ categories, teammates, storageKey
         </div>
         <div className="rounded-xl border-[1px] border-black/30 bg-[#edf2f7] p-4">
           <label htmlFor="results-owner" className="block text-[13px] font-semibold text-slate-800">Assign these prospects to (optional)</label>
-          <select id="results-owner" value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} disabled={Boolean(savingLeadKey) || savingAll} aria-describedby="results-owner-help" className={fieldClassName}>
+          <select id="results-owner" value={selectedOwnerId} onChange={(event) => setOwnerId(event.target.value)} disabled={Boolean(autoAssignUserId) || Boolean(savingLeadKey) || savingAll} aria-describedby="results-owner-help" className={fieldClassName}>
             <option value="">Unassigned</option>{teammates.map((teammate) => <option key={teammate.id} value={teammate.id}>{teammate.name || teammate.email}</option>)}
           </select>
-          <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{teammates.length ? 'Save prospects as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Prospects will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-[#173b65] underline">Manage team</Link></>}</p>
+          <p id="results-owner-help" className="mt-2 text-xs text-slate-600">{autoAssignUserId ? 'Prospects you add are assigned to you automatically.' : teammates.length ? 'Save prospects as unassigned, or choose a teammate to receive them.' : <>No active teammates yet. Prospects will be saved as unassigned. <Link href="/admin/team" className="font-semibold text-[#173b65] underline">Manage team</Link></>}</p>
         </div>
         {bulkProgress && <div role="status" className={`rounded-xl border p-4 text-sm ${bulkProgress.failed ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-emerald-300 bg-emerald-50 text-emerald-900'}`}>
           <p className="font-semibold">{savingAll ? `Adding prospects: ${bulkProgress.done} of ${bulkProgress.total} processed` : 'Bulk add finished'}</p>

@@ -22,7 +22,7 @@ const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((par
 export async function AdminSectionPage({ section }: { section: keyof typeof content }) {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) redirect('/sign-in')
-  const result = await pool.query(`SELECT o."id", o."name", o."staffCount", o."plan" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id" WHERE m."authUserId" = $1 AND m."role" = 'ADMIN' LIMIT 1`, [session.user.id])
+  const result = await pool.query(`SELECT m."role", o."id", o."name", o."staffCount", o."plan" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id" WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' LIMIT 1`, [session.user.id])
   const organization = result.rows[0]
   if (!organization) redirect('/onboarding')
   const page = content[section]
@@ -48,7 +48,7 @@ export async function AdminSectionPage({ section }: { section: keyof typeof cont
 
   return (
     <main className="dashboard-page min-h-screen bg-[#f4f6f9] p-3 text-[#30263f] md:p-4">
-      <div className="dashboard-frame flex min-h-screen gap-3"><DashboardSidebar role="ADMIN" userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} /><section className="dashboard-content min-w-0 flex-1 rounded-[24px] border-[1px] border-black/30 bg-white px-4 py-5 shadow-[0_10px_30px_rgba(20,34,28,0.035)] sm:px-7 md:py-8">
+      <div className="dashboard-frame flex min-h-screen gap-3"><DashboardSidebar role={organization.role} userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} /><section className="dashboard-content min-w-0 flex-1 rounded-[24px] border-[1px] border-black/30 bg-white px-4 py-5 shadow-[0_10px_30px_rgba(20,34,28,0.035)] sm:px-7 md:py-8">
         <header className="border-b-[1px] border-black/30 pb-5"><p className="text-xs text-[#657286]">{organization.name} / {page.eyebrow.split(' / ')[1]}</p><div className="mt-2 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-[#eee9f1] text-[#30263f]"><Icon className="size-5" /></span><div><h1 className="text-3xl font-semibold tracking-[-0.04em]">{page.title}</h1><p className="mt-1 text-sm text-[#657286]">{page.description}</p></div></div></header>
         {section === 'team' ? <>
           <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[

@@ -14,8 +14,8 @@ export default async function AdminDashboard() {
   if (!session?.user) redirect("/sign-in");
   const organization = (
     await pool.query(
-      `SELECT o.* FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN' ORDER BY o."createdAt" DESC LIMIT 1`,
+      `SELECT m."role", o.* FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`,
       [session.user.id]
     )
   ).rows[0];
@@ -105,7 +105,7 @@ export default async function AdminDashboard() {
   return (
     <main className="dashboard-page">
       <div className="dashboard-frame">
-        <DashboardSidebar role="ADMIN" userName={adminName} userEmail={session.user.email} organizationName={organization.name} />
+        <DashboardSidebar role={organization.role} userName={adminName} userEmail={session.user.email} organizationName={organization.name} />
         <section className="dashboard-content">
           <AdminDashboardOverview organizationName={organization.name} today={today} stageCounts={stageCounts} totalLeads={totalLeads} activeStaff={activeStaff} totalOutreach={totalOutreach} totalEmailsSent={totalEmailsSent} staff={staff} businesses={recentResult.rows} activity={activity} actions={<>{planExceeded && <UpgradePlanButton currentPlan={organization.plan || 'FREE'} />}<InviteLinkButton /></>} />
         </section>

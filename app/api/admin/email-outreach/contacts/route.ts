@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getAdminSession } from '@/lib/admin-session'
+import { getWorkspaceSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
 
 export async function GET(request: Request) {
-  const admin = await getAdminSession()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an active admin.' }, { status: 401 })
+  const admin = await getWorkspaceSession()
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   const params = new URL(request.url).searchParams
   const page = Math.max(1, Math.min(100000, Number(params.get('page')) || 1)) | 0
   const search = (params.get('search') || '').trim().slice(0, 160)

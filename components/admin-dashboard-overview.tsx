@@ -11,7 +11,7 @@ type Props = { organizationName: string; today: string; stageCounts: SalesStageC
 const number = (value: number) => new Intl.NumberFormat('en-NG').format(value)
 const stages = [
   { key: 'LEAD', label: 'Prospects', description: 'Outreach contacts in your pipeline.', color: '#ee394f' },
-  { key: 'PROSPECT', label: 'Leads', description: 'Contacts who responded positively to your outreach.', color: '#f38b3c' },
+  { key: 'PROSPECT', label: 'Qualified prospects', description: 'Contacts who responded positively to your outreach.', color: '#f38b3c' },
   { key: 'CLIENT', label: 'Clients', description: 'Businesses that have chosen to work with you.', color: '#ebc736' },
   { key: 'ONBOARDED', label: 'Onboarded', description: 'Clients getting ready for service delivery.', color: '#28ae77' },
   { key: 'CAMPAIGN_SUCCESSFUL', label: 'Completed deals', description: 'Successfully completed client engagements.', color: '#4761a9' },

@@ -54,8 +54,8 @@ export default async function AnalyticsPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session?.user) redirect('/sign-in')
   const organization = (await pool.query(
-    `SELECT o."id", o."name" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
+    `SELECT m."role", o."id", o."name" FROM "Organization" o JOIN "OrganizationMember" m ON m."organizationId" = o."id"
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE' ORDER BY o."createdAt" DESC LIMIT 1`, [session.user.id],
   )).rows[0]
   if (!organization) redirect('/onboarding')
 
@@ -103,7 +103,7 @@ export default async function AnalyticsPage() {
   const tracked = Number(totals.total)
   const months: MonthMetric[] = activityRows.rows.map((row) => ({ label: row.label, leads: Number(row.leads), outreach: Number(row.outreach) }))
 
-  return <main className="dashboard-page min-h-screen bg-[#d9dde2] p-3 text-[#111827] md:p-4"><div className="dashboard-frame mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3"><DashboardSidebar role="ADMIN" userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} /><section className="dashboard-content min-w-0 flex-1 rounded-[28px] border border-white/70 bg-[#f7f7f6] p-4 shadow-[0_14px_45px_rgba(15,23,42,0.06)] sm:p-6 lg:p-8">
+  return <main className="dashboard-page min-h-screen bg-[#d9dde2] p-3 text-[#111827] md:p-4"><div className="dashboard-frame mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1600px] gap-3"><DashboardSidebar role={organization.role} userName={session.user.name || 'Admin'} userEmail={session.user.email} organizationName={organization.name} /><section className="dashboard-content min-w-0 flex-1 rounded-[28px] border border-white/70 bg-[#f7f7f6] p-4 shadow-[0_14px_45px_rgba(15,23,42,0.06)] sm:p-6 lg:p-8">
     <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9298a2]">{organization.name} · Workspace</p><h1 className="mt-1 text-3xl font-semibold tracking-[-0.05em]">Analytics</h1><p className="mt-1 text-xs text-[#89909b]">A visual look at your pipeline, wins, and team activity.</p></div><span className="rounded-full bg-white px-3 py-2 text-[10px] font-medium text-[#707783] shadow-sm">Current pipeline</span></header>
     <section className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{[['All businesses', tracked, '#8557e8'], ['Prospects', leadCount, stageColors.leads], ['Leads', prospectCount, stageColors.prospects], ['Clients', clientCount, stageColors.clients]].map(([label, value, color]) => <article key={String(label)} className="rounded-2xl border border-black/[0.05] bg-white px-4 py-3 shadow-sm"><p className="text-[10px] text-[#89909b]">{label}</p><div className="mt-1 flex items-center gap-2"><span className="size-2 rounded-full" style={{ backgroundColor: String(color) }} /><strong className="text-xl tracking-tight">{fmt(Number(value))}</strong></div></article>)}</section>
     <section className="grid gap-4 xl:grid-cols-2"><Card title="Conversion by industry" subtitle="Prospects, positive-response leads, and client wins in each industry."><ConversionChart items={industries} /></Card><Card title="Category performance" subtitle="Current pipeline by category, ranked by client share."><CategoryBars items={categories} /></Card><Card title="Client wins by industry" subtitle="How client wins are distributed across industries."><IndustryPie items={industries} /></Card><Card title="Prospect & outreach activity" subtitle="Businesses added and outreach touches over the last six months."><ActivityBars months={months} /></Card></section>

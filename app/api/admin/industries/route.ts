@@ -10,7 +10,7 @@ async function getAdminOrganization() {
   const organization = (await pool.query(
     `SELECT o."id" FROM "Organization" o
      JOIN "OrganizationMember" m ON m."organizationId" = o."id"
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN'
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE'
      ORDER BY o."createdAt" DESC LIMIT 1`,
     [session.user.id],
   )).rows[0]
@@ -20,7 +20,7 @@ async function getAdminOrganization() {
 
 export async function POST(request: Request) {
   const admin = await getAdminOrganization()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an organization admin.' }, { status: 401 })
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
   const name = typeof body.name === 'string' ? body.name.trim().replace(/\s+/g, ' ') : ''

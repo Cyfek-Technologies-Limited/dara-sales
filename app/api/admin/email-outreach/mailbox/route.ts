@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
-import { getAdminSession } from '@/lib/admin-session'
+import { getWorkspaceSession } from '@/lib/admin-session'
 import { pool } from '@/lib/db'
 import { encryptPassword, smtpTransport } from '@/lib/smtp-mailbox'
 
 export async function POST(request: Request) {
-  const admin = await getAdminSession()
-  if (!admin) return NextResponse.json({ error: 'Sign in as an active admin.' }, { status: 401 })
+  const admin = await getWorkspaceSession()
+  if (!admin) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
   if (request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   const body = await request.json().catch(() => ({}))
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''

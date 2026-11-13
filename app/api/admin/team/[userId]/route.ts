@@ -5,15 +5,15 @@ import { pool } from '@/lib/db'
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session?.user) return NextResponse.json({ error: 'Sign in as an organization admin.' }, { status: 401 })
+  if (!session?.user) return NextResponse.json({ error: 'Sign in as an active workspace member.' }, { status: 401 })
 
   const organization = (await pool.query(
     `SELECT m."organizationId" FROM "OrganizationMember" m
-     WHERE m."authUserId" = $1 AND m."role" = 'ADMIN'
+     WHERE m."authUserId" = $1 AND m."role" IN ('ADMIN','STAFF') AND m."status" = 'ACTIVE'
      ORDER BY m."joinedAt" DESC LIMIT 1`,
     [session.user.id],
   )).rows[0]
-  if (!organization) return NextResponse.json({ error: 'Admin workspace not found.' }, { status: 403 })
+  if (!organization) return NextResponse.json({ error: 'Active workspace not found.' }, { status: 403 })
 
   const { userId } = await params
   if (!userId || userId === session.user.id) {
