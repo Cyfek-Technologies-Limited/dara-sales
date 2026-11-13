@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'Web prospect search is not configured. Add OPENAI_API_KEY to the server environment.' }, { status: 503 })
 
   const body = await request.json().catch(() => ({}))
-  const offering = typeof body.offering === 'string' ? body.offering.trim().slice(0, 500) : ''
+  const offering = admin.role !== 'STAFF' && typeof body.offering === 'string' ? body.offering.trim().slice(0, 500) : ''
   const location = typeof body.location === 'string' ? body.location.trim().slice(0, 160) : ''
   const categoryId = typeof body.categoryId === 'string' ? body.categoryId : ''
   const keywords = typeof body.keywords === 'string' ? body.keywords.trim().slice(0, 300) : ''
