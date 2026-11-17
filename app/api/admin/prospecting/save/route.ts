@@ -4,6 +4,7 @@ import { prepareEmailAutomation, processEmailQueue } from '@/lib/email-outreach'
 import { auth } from '@/lib/auth'
 import { pool } from '@/lib/db'
 import { sameBusinessWebsite } from '@/lib/website-contacts'
+import { linkedInProfile } from '@/lib/linkedin-contact'
 
 export const maxDuration = 60
 
@@ -41,8 +42,8 @@ export async function POST(request: Request) {
   const contactSourceUrl = validWebUrl(body.contactSourceUrl)
   const emailSourceUrl = validWebUrl(body.emailSourceUrl) || contactSourceUrl
   const phoneSourceUrl = validWebUrl(body.phoneSourceUrl) || contactSourceUrl
-  const personSourceUrl = validWebUrl(body.personSourceUrl)
-  const personSourceValid = personSourceUrl && website && new URL(personSourceUrl).hostname.toLowerCase().replace(/^www\./, '') === new URL(website).hostname.toLowerCase().replace(/^www\./, '')
+  const personSourceUrl = linkedInProfile(body.personSourceUrl) || validWebUrl(body.personSourceUrl)
+  const personSourceValid = personSourceUrl && website && (Boolean(linkedInProfile(personSourceUrl)) || sameBusinessWebsite(personSourceUrl, website))
   const contactName = personSourceValid && typeof body.contactName === 'string' ? body.contactName.trim().slice(0, 160) : null
   const contactJobTitle = contactName && typeof body.contactJobTitle === 'string' ? body.contactJobTitle.trim().slice(0, 160) : null
   const teamSourceUrl = validWebUrl(body.targetTeamSourceUrl)
@@ -67,8 +68,10 @@ export async function POST(request: Request) {
   const ownerId = admin.role === 'STAFF' ? admin.userId : owner?.authUserId || null
   if (!category) return NextResponse.json({ error: 'Choose a valid industry category.' }, { status: 400 })
   if (admin.role === 'STAFF' && !admin.industryIds.includes(category.industryId)) return NextResponse.json({ error: 'Choose a category in one of your assigned industries.' }, { status: 403 })
-  if (email && !groupInbox && (!emailSourceUrl || !sameBusinessWebsite(emailSourceUrl, website!)) || phone && (!phoneSourceUrl || !sameBusinessWebsite(phoneSourceUrl, website!))) {
-    return NextResponse.json({ error: 'Contact details need a source page on the business website.' }, { status: 400 })
+  const validContactSource = (url: string | null) => Boolean(url && (sameBusinessWebsite(url, website!)
+    || contactName && linkedInProfile(url) && linkedInProfile(url) === linkedInProfile(personSourceUrl)))
+  if (email && !groupInbox && !validContactSource(emailSourceUrl) || phone && !validContactSource(phoneSourceUrl)) {
+    return NextResponse.json({ error: 'Contact details need a company source page or the named person’s public LinkedIn profile.' }, { status: 400 })
   }
 
   const duplicate = (await pool.query(
@@ -79,7 +82,7 @@ export async function POST(request: Request) {
   if (duplicate) return NextResponse.json({ error: 'This business is already in your prospect pipeline.' }, { status: 409 })
 
   const leadId = crypto.randomUUID()
-  const generalContactNote = body.generalCompanyContact === true ? ' | Contact type: general company inbox / phone' : body.usedSearchIndex === true ? ' | Contact details found in search-indexed company pages; review sources.' : ''
+  const generalContactNote = `${body.generalCompanyContact === true ? ' | Contact type: general company inbox / phone' : ''}${body.generalEmail === true ? ' | Email is a general company inbox, not the named person' : ''}${body.generalPhone === true ? ' | Phone is a general company number, not the named person' : ''}${linkedInProfile(personSourceUrl) ? ' | Public LinkedIn role match; current employment requires review' : ''}${body.usedSearchIndex === true ? ' | Contact details found in search-indexed company pages; review sources.' : ''}`
   const teamSource = teamSourceValid && contactDepartment ? ` | ${groupInbox ? 'Group inbox' : body.inboxScope === 'DEPARTMENT' ? 'Department inbox' : 'Team'} source: ${teamSourceUrl}` : ''
   try {
     await prepareEmailAutomation(admin.organizationId).catch(() => console.error('[email] Could not prepare automation; scheduled worker will recover'))

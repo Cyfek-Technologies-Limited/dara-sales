@@ -7,7 +7,10 @@ function sourceKey(value: string) {
 // Search-index fallback for public business pages that cannot be fetched directly.
 // Keep these contacts labeled as indexed, rather than claiming a live site check.
 export async function researchBusinessContacts(website: string, businessName: string, preferredPages: string[] = [], deadline = Date.now() + 45000): Promise<WebsiteContacts & { usedSearchIndex?: boolean }> {
-  const direct = await extractWebsiteContacts(website, preferredPages, deadline)
+  const direct: WebsiteContacts = await extractWebsiteContacts(website, preferredPages, deadline).catch(() => ({
+    publicEmail: '', publicPhone: '', emailSourceUrl: '', phoneSourceUrl: '', contactSourceUrl: '',
+    contactLookupStatus: 'UNAVAILABLE' as const, contactLookupMessage: 'The website lookup could not complete. Use Find missing contacts to retry.', contactPagesChecked: [],
+  }))
   if (direct.publicPhone && direct.publicEmail || !process.env.OPENAI_API_KEY || deadline - Date.now() < 2000) return direct
   try {
     const host = new URL(website).hostname.toLowerCase().replace(/^www\./, '')
