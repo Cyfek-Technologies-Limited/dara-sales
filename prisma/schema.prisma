@@ -34,6 +34,7 @@ model Organization {
   emailAutomation   EmailAutomation?
   emailSyncJobs     EmailSyncJob[]
   prospectingPreferences ProspectingPreference[]
+  prospectDiscovery ProspectDiscovery[]
   emailSenders      OrganizationEmailSender[]
   emailSuppressions EmailSuppression[]
   mailboxOAuthStates MailboxOAuthState[]
@@ -297,6 +298,29 @@ model ProspectingPreference {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@id([organizationId, authUserId])
+  @@schema("public")
+}
+
+model ProspectDiscovery {
+  organizationId String
+  authUserId String
+  enabled Boolean @default(false)
+  location String @default("")
+  targetContact String @default("")
+  dailyTarget Int @default(50)
+  day DateTime @default(now()) @db.Date
+  addedToday Int @default(0)
+  runsToday Int @default(0)
+  totalAdded Int @default(0)
+  categoryCursor Int @default(0)
+  nextRunAt DateTime @default(now()) @db.Timestamptz
+  lockedUntil DateTime? @db.Timestamptz
+  leaseId String?
+  lastRunAt DateTime? @db.Timestamptz
+  lastMessage String?
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@id([organizationId, authUserId])
+  @@index([enabled, nextRunAt], map: "ProspectDiscovery_due")
   @@schema("public")
 }
 
