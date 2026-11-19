@@ -34,7 +34,7 @@ export async function processProspectDiscovery() {
     const existing = (await pool.query(`SELECT "businessName" FROM "SalesLead" WHERE "organizationId"=$1 ORDER BY "createdAt" DESC LIMIT 150`, [job.organizationId])).rows
     // Industry-only discovery intentionally uses the same category search mode as staff.
     const response = await researchProspects({ location: job.location, categoryId: category.id,
-      targetContact: job.targetContact, resultLimit: 12, contactPreference: 'ANY' },
+      targetContact: job.targetContact, resultLimit: 5, contactPreference: 'ANY' },
     { organizationId: job.organizationId, role: 'STAFF', industryIds: categories.map((c: { industryId: string }) => c.industryId) },
     `\nAlready saved businesses to exclude: ${JSON.stringify(existing.map((r: { businessName: string }) => r.businessName))}. Search for different businesses; vary search terms and locality within the requested location. Batch number ${job.categoryCursor + 1}.`)
     const data = await response.json()

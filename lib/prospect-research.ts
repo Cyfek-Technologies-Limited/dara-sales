@@ -1,4 +1,5 @@
 import { BusinessSearchOutputError, parseBusinessSearchOutput } from '@/lib/business-search-output'
+import { businessSearchFormat } from '@/lib/business-search-format'
 import { researchBusinessContacts } from '@/lib/business-contact-research'
 import { linkedInProfile, publishedContactEvidence } from '@/lib/linkedin-contact'
 import { NextResponse } from 'next/server'
@@ -76,6 +77,7 @@ export async function researchProspects(body: Record<string, any>, admin: { orga
         tools: [{ type: 'web_search' }],
         tool_choice: 'required',
         include: ['web_search_call.action.sources'],
+        text: { format: businessSearchFormat },
         input: [
           { role: 'system', content: `Discover decision makers using public web searches including site:linkedin.com/in/ plus the exact company name and requested job function. Consult publicly accessible LinkedIn profiles and official company staff/press pages and publicly indexed official business social media pages for discovery; independently cross-check contacts on the official website or the named LinkedIn profile. Never sign in, bypass access restrictions, or imply a profile is verified current when its public evidence is unclear. A LinkedIn profile is an exception to the social-network prohibition below ONLY for personSourceUrl and directly attributed work contact sources; business website and business source must remain official company pages. Return a named employee only when public evidence explicitly connects their name, job title and current employer to this exact business (not a similarly named company or former employer). Return personEvidence as a short exact excerpt establishing that connection. Search the person's name with company and email/phone on official pages and their public LinkedIn profile. For every channel return emailEvidence / phoneEvidence as short exact excerpts explicitly attributing that work contact to the person or matching department. No inferred email patterns, private contact databases, personal contact details or guessed numbers. A name/profile without a published work channel is still useful: retain it, and label any company fallback separately. Use exact URLs returned by web search. LinkedIn availability varies; never promise a person or direct contact will be found.` },
           ...(admin.role === 'STAFF' ? [{ role: 'system', content: 'This is an assigned-industry search by a sales team member. Find real businesses operating in the selected industry and category. No offering description is required. Ignore the offering-based competitor exclusion and purchase-fit classification instructions below when the offering is empty; instead use customerRole END_USER, sellsOffering false, and buyerReason explaining the sourced industry/category match without implying buying intent.' }] : []),
@@ -90,7 +92,7 @@ Also research the appropriate publicly listed business contact (for example proc
           ] : []),
           { role: 'system', content: 'For person discovery, explicitly include public LinkedIn /in/ profiles in your searches. This overrides earlier official-pages-only restrictions for personSourceUrl. Public LinkedIn profile URLs may also be emailSourceUrl/phoneSourceUrl only when that exact profile explicitly publishes the person’s work contact. Keep official-site-only restrictions for business website/source and department/group inboxes. Include personEvidence with the exact business name, person name and title as published; emailEvidence and phoneEvidence must include both the person name and the published channel. Do not invent evidence excerpts. Return targetContactMatch PERSON even if their work channels are unavailable. Keep output concise.' },
         ],
-        max_output_tokens: resultLimit * 900,
+        max_output_tokens: Math.max(6000, resultLimit * 900),
       }),
       signal: AbortSignal.timeout(60000),
     })
@@ -114,6 +116,7 @@ Also research the appropriate publicly listed business contact (for example proc
     if (contentParts.some((part: { type?: string }) => part?.type === 'refusal')) return NextResponse.json({ error: 'The research provider declined this search. Try a broader industry category or different keywords.', code: 'SEARCH_REFUSED' }, { status: 422 })
     const outputText = typeof result.output_text === 'string' ? result.output_text
       : contentParts.filter((part: { type?: string; text?: unknown }) => part?.type === 'output_text' && typeof part.text === 'string').map((part: { text: string }) => part.text).join('\n')
+    if (!outputText.trim()) console.warn('[prospecting] Empty research output', { requestId: providerRequestId, status: result.status, reason: result.incomplete_details?.reason, outputTypes: outputItems.map((item: { type?: string }) => item.type) })
     const parsed = parseBusinessSearchOutput(outputText)
     const partial = parsed.partial || result.status === 'incomplete'
     if (partial) console.warn('[prospecting] Partial research output', { requestId: providerRequestId, reason: result.incomplete_details?.reason, completeRecords: parsed.businesses.length })

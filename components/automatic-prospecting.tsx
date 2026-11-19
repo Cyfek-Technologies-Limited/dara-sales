@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Discovery = { enabled: boolean; location: string; targetContact: string; dailyTarget: number; addedToday: number; totalAdded: number; runsToday?: number; running?: boolean; lastRunAt?: string; lastMessage?: string }
+type Discovery = { enabled: boolean; location: string; targetContact: string; dailyTarget: number; addedToday: number; totalAdded: number; runsToday?: number; running?: boolean; lastRunAt?: string; nextRunAt?: string; lastMessage?: string }
 export default function AutomaticProspecting() {
   const router = useRouter()
   const [data,setData] = useState<Discovery | null>(null)
@@ -17,7 +17,7 @@ export default function AutomaticProspecting() {
         const result = await response.json()
         if (!response.ok) throw new Error(result.error || 'Could not load automatic discovery.')
         if (!alive) return
-        setData(result.discovery); setStaff(result.staff); setConfigured(result.configured)
+        setData(result.discovery); setStaff(result.staff); setConfigured(result.configured); setError('')
         if (initial) { setLocation(result.discovery.location); setTargetContact(result.discovery.targetContact); setDailyTarget(result.discovery.dailyTarget); initial=false }
         if (total !== undefined && total !== result.discovery.totalAdded) router.refresh()
         total=result.discovery.totalAdded
@@ -49,7 +49,7 @@ export default function AutomaticProspecting() {
     </div>
     <p className="mt-3 text-xs leading-5 text-slate-500">Runs in batches while you are away. Availability varies; targets are not guaranteed. Uses your configured OpenAI API and incurs usage charges, with a maximum of 30 research batches per day. New prospects with email may receive an already-approved automated outreach message.</p>
     <div className="mt-4 flex flex-wrap items-center gap-3"><button disabled={busy || !data || !configured || !location.trim()} onClick={()=>void save(true)} className="rounded-xl bg-[#0b1f3a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy?'Saving…':data?.enabled?'Save discovery settings':'Enable automatic discovery'}</button>{data?.enabled && <button disabled={busy} onClick={()=>void save(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm">Pause</button>}<span className="text-xs text-slate-600">{data?.addedToday || 0} / {data?.dailyTarget || dailyTarget} saved today · {data?.totalAdded || 0} total</span></div>
-    <div role="status" className="mt-3 text-xs text-slate-600">{data?.lastMessage}{data?.lastRunAt && <span> Last run: {new Date(data.lastRunAt).toLocaleString()}.</span>}{data?.enabled && !data.lastRunAt && <p>The server scheduler must be configured. Discovery continues after you close this page.</p>}{(data?.runsToday || 0)>=30 && <p>Daily research limit reached. Discovery resumes tomorrow.</p>}</div>
+    <div role="status" className="mt-3 text-xs text-slate-600">{data?.lastMessage}{data?.lastRunAt && <span> Last run: {new Date(data.lastRunAt).toLocaleString()}.</span>}{data?.enabled && !data.lastRunAt && <p>Waiting for the first scheduled batch. Discovery continues after you close this page.</p>}{data?.enabled && data.nextRunAt && <p>Next eligible batch: {new Date(data.nextRunAt).toLocaleString()}.</p>}{(data?.runsToday || 0)>=30 && <p>Daily research limit reached. Discovery resumes tomorrow.</p>}</div>
     {(!configured || error) && <p role="alert" className="mt-3 text-sm text-red-700">{error || 'Web research is not configured on the server.'}</p>}
   </section>
 }
