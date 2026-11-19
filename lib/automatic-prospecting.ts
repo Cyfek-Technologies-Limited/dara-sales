@@ -20,10 +20,11 @@ export async function processProspectDiscovery() {
   if (!job) return { state: 'idle' }
   let added = 0, updated = 0
   let message = ''
+  let activeLocation = ''
   const report = async (progress: ResearchProgress) => {
     await pool.query(`UPDATE "ProspectDiscovery" SET "progress"=$4::jsonb
       WHERE "organizationId"=$1 AND "authUserId"=$2 AND "leaseId"=$3 AND "enabled" AND "lockedUntil">now()`,
-    [job.organizationId,job.authUserId,leaseId,JSON.stringify(progress)])
+    [job.organizationId,job.authUserId,leaseId,JSON.stringify({ ...progress, location: activeLocation })])
   }
   try {
     const member = (await pool.query(`SELECT "role", "industryId", "industryIds" FROM "OrganizationMember"
@@ -35,10 +36,15 @@ export async function processProspectDiscovery() {
       WHERE i."organizationId"=$1 AND ($2::text[] IS NULL OR i."id"=ANY($2::text[])) ORDER BY i."name",c."name"`,
     [job.organizationId, member.role === 'ADMIN' ? null : assigned])).rows
     if (!categories.length) throw new Error('No assigned industry categories are available. Ask an administrator to assign industries.')
-    const category = categories[job.categoryCursor % categories.length]
+    const locations: string[] = job.locations?.length ? job.locations : job.location ? [job.location] : []
+    if (!locations.length) throw new Error('Discovery needs at least one target location.')
+    // Cover every location/category pair, even when their counts share factors.
+    const location = locations[job.categoryCursor % locations.length]
+    activeLocation = location
+    const category = categories[Math.floor(job.categoryCursor / locations.length) % categories.length]
     const existing = (await pool.query(`SELECT "businessName" FROM "SalesLead" WHERE "organizationId"=$1 ORDER BY "createdAt" DESC LIMIT 150`, [job.organizationId])).rows
     // Industry-only discovery intentionally uses the same category search mode as staff.
-    const response = await researchProspects({ location: job.location, categoryId: category.id,
+    const response = await researchProspects({ location, categoryId: category.id,
       targetContact: job.targetContact, resultLimit: 5, contactPreference: 'ANY' },
     { organizationId: job.organizationId, role: 'STAFF', industryIds: categories.map((c: { industryId: string }) => c.industryId) },
     `\nAlready saved businesses to exclude: ${JSON.stringify(existing.map((r: { businessName: string }) => r.businessName))}. Search for different businesses; vary search terms and locality within the requested location. Batch number ${job.categoryCursor + 1}.`, report)

@@ -302,6 +302,7 @@ model ProspectingPreference {
 }
 
 model ProspectDiscovery {
+  locations String[] @default([])
   progress Json @default("{}")
   organizationId String
   authUserId String

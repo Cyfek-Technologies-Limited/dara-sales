@@ -4,15 +4,16 @@ const fs = require('node:fs')
 const vm = require('node:vm')
 const ts = require('typescript')
 
-async function scenario({ remaining = 50, revoked = false, providerFailure = false } = {}) {
+async function scenario({ remaining = 50, revoked = false, providerFailure = false, locations, cursor = 0, categoryCount = 1 } = {}) {
   const queries = [], inserts = [], updates = []
-  const job = { organizationId: 'org', authUserId: 'staff', categoryCursor: 0, location: 'Lagos', dailyTarget: 50, addedToday: 50 - remaining }
+  const job = { organizationId: 'org', authUserId: 'staff', categoryCursor: cursor, location: 'Lagos', locations, dailyTarget: 50, addedToday: 50 - remaining }
+  let searched
   const member = { role: 'STAFF', industryIds: revoked ? ['different'] : ['industry'] }
   async function query(sql, values = []) {
     queries.push({ sql, values })
     if (sql.startsWith('WITH due')) return { rows: [job] }
     if (sql.startsWith('SELECT "role"')) return { rows: [{ role: 'STAFF', industryIds: ['industry'] }] }
-    if (sql.includes('FROM "IndustryCategory"')) return { rows: [{ id: 'category', industryId: 'industry', industry: 'Manufacturing' }] }
+    if (sql.includes('FROM "IndustryCategory"')) return { rows: Array.from({length:categoryCount},(_,i)=>({ id: i ? `category${i}` : 'category', industryId:'industry',industry:'Manufacturing' })) }
     if (sql.startsWith('SELECT "businessName"')) return { rows: [] }
     if (sql.startsWith('SELECT d.*')) return { rows: [{ ...job, ...member }] }
     if (sql.startsWith('SELECT "id","ownerId"')) return { rows: values[1] === 'Other owner' ? [{ id: 'other', ownerId: 'someone-else' }] : values[1] === 'Own existing' ? [{ id: 'own', ownerId: 'staff' }] : [] }
@@ -23,9 +24,9 @@ async function scenario({ remaining = 50, revoked = false, providerFailure = fal
   const pool = { query, connect: async () => ({ query, release() {} }) }
   const businesses = ['Other owner','Own existing','First new','Second new','No contacts'].map((name,index) => ({ businessName:name,website:`https://example${index}.com`,sourceUrl:`https://example${index}.com/about`, publicEmail:index===4?'':`work@example${index}.com`,summary:'Sourced company' }))
   const researchProspects = async (body, scope, exclusions, report) => {
-    assert.equal(body.categoryId, 'category')
+    searched = {location:body.location,category:body.categoryId}
     assert.equal(scope.role, 'STAFF')
-    assert.deepEqual(Array.from(scope.industryIds), ['industry'])
+    assert.ok(Array.from(scope.industryIds).every(id=>id==='industry'))
     await report({ phase:'SEARCHING', message:'Searching public sources.' })
     await report({ phase:'CONTACTS', message:'Checking contacts.', company:'First new',checked:1,total:2 })
     return { ok: !providerFailure, json: async () => providerFailure ? { code:'SEARCH_TIMEOUT' } : { businesses } }
@@ -34,7 +35,7 @@ async function scenario({ remaining = 50, revoked = false, providerFailure = fal
   const source = ts.transpileModule(fs.readFileSync('lib/automatic-prospecting.ts','utf8'), { compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022} }).outputText
   vm.runInNewContext(source, { module,exports:module.exports,require(name) { if(name==='@/lib/db')return {pool};if(name==='@/lib/prospect-research')return {researchProspects};throw Error(name) },process:{env:{OPENAI_API_KEY:'offline-fixture'}},crypto:require('node:crypto').webcrypto,URL,console:{error() {}} })
   const result = await module.exports.processProspectDiscovery()
-  return { result,queries,inserts,updates }
+  return { result,queries,inserts,updates,searched }
 }
 
 ;(async () => {
@@ -60,5 +61,13 @@ async function scenario({ remaining = 50, revoked = false, providerFailure = fal
   assert.equal(failed.inserts.length,0)
   assert.equal(failed.result.state,'retry-scheduled')
   assert.ok(failed.queries.some(q=>q.sql.includes("interval '1 hour'")))
+  assert.equal(normal.searched.location,'Lagos') // Legacy single-location settings.
+  const pairs=[]
+  for(let cursor=0;cursor<6;cursor++) pairs.push((await scenario({locations:['Lagos','Abuja','Ibadan'],cursor,categoryCount:2})).searched)
+  assert.deepEqual(pairs,[
+    {location:'Lagos',category:'category'},{location:'Abuja',category:'category'},{location:'Ibadan',category:'category'},
+    {location:'Lagos',category:'category1'},{location:'Abuja',category:'category1'},{location:'Ibadan',category:'category1'},
+  ])
+  assert.deepEqual((await scenario({locations:['Lagos','Abuja','Ibadan'],cursor:6,categoryCount:2})).searched,pairs[0])
   console.log('Passed: staff ownership, duplicate privacy, contact requirement, daily cap, revoked assignments, research retry.')
 })().catch(error=>{console.error(error);process.exitCode=1})
