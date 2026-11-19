@@ -302,6 +302,7 @@ model ProspectingPreference {
 }
 
 model ProspectDiscovery {
+  progress Json @default("{}")
   organizationId String
   authUserId String
   enabled Boolean @default(false)

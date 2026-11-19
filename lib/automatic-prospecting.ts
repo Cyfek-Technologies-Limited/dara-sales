@@ -1,5 +1,5 @@
 import { pool } from '@/lib/db'
-import { researchProspects } from '@/lib/prospect-research'
+import { researchProspects, type ResearchProgress } from '@/lib/prospect-research'
 
 // Each scheduler tick claims one small batch. No request searches 100 companies at once.
 export async function processProspectDiscovery() {
@@ -15,11 +15,16 @@ export async function processProspectDiscovery() {
   ) UPDATE "ProspectDiscovery" d SET "lockedUntil"=now()+interval '5 minutes', "leaseId"=$1,
     "addedToday"=CASE WHEN "day"=CURRENT_DATE THEN "addedToday" ELSE 0 END,
     "runsToday"=CASE WHEN "day"=CURRENT_DATE THEN "runsToday"+1 ELSE 1 END,
-    "day"=CURRENT_DATE, "lastRunAt"=now()
+    "day"=CURRENT_DATE, "lastRunAt"=now(), "progress"='{"phase":"SEARCHING","message":"Preparing the next industry search."}'::jsonb
     FROM due WHERE d."organizationId"=due."organizationId" AND d."authUserId"=due."authUserId" RETURNING d.*`, [leaseId])).rows[0]
   if (!job) return { state: 'idle' }
   let added = 0, updated = 0
   let message = ''
+  const report = async (progress: ResearchProgress) => {
+    await pool.query(`UPDATE "ProspectDiscovery" SET "progress"=$4::jsonb
+      WHERE "organizationId"=$1 AND "authUserId"=$2 AND "leaseId"=$3 AND "enabled" AND "lockedUntil">now()`,
+    [job.organizationId,job.authUserId,leaseId,JSON.stringify(progress)])
+  }
   try {
     const member = (await pool.query(`SELECT "role", "industryId", "industryIds" FROM "OrganizationMember"
       WHERE "organizationId"=$1 AND "authUserId"=$2 AND "status"='ACTIVE'`, [job.organizationId, job.authUserId])).rows[0]
@@ -36,9 +41,10 @@ export async function processProspectDiscovery() {
     const response = await researchProspects({ location: job.location, categoryId: category.id,
       targetContact: job.targetContact, resultLimit: 5, contactPreference: 'ANY' },
     { organizationId: job.organizationId, role: 'STAFF', industryIds: categories.map((c: { industryId: string }) => c.industryId) },
-    `\nAlready saved businesses to exclude: ${JSON.stringify(existing.map((r: { businessName: string }) => r.businessName))}. Search for different businesses; vary search terms and locality within the requested location. Batch number ${job.categoryCursor + 1}.`)
+    `\nAlready saved businesses to exclude: ${JSON.stringify(existing.map((r: { businessName: string }) => r.businessName))}. Search for different businesses; vary search terms and locality within the requested location. Batch number ${job.categoryCursor + 1}.`, report)
     const data = await response.json()
     if (!response.ok) throw new Error(data.code ? `Research failed (${data.code}).` : 'Research provider could not complete this batch.')
+    await report({ phase: 'SAVING', message: 'Removing duplicates and saving prospects to your pipeline.', total: data.businesses?.length || 0 })
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
@@ -78,6 +84,7 @@ export async function processProspectDiscovery() {
       message = `${added} new prospects saved; ${updated} existing contacts updated. ${data.warning || ''}`.trim()
       await client.query(`UPDATE "ProspectDiscovery" SET "addedToday"="addedToday"+$4,"totalAdded"="totalAdded"+$4,
         "categoryCursor"="categoryCursor"+1,"lockedUntil"=NULL,"leaseId"=NULL,"lastMessage"=$5,
+        "progress"=jsonb_build_object('phase','COMPLETE','message',$5::text),
         "nextRunAt"=now()+interval '30 minutes' WHERE "organizationId"=$1 AND "authUserId"=$2 AND "leaseId"=$3`,
       [job.organizationId,job.authUserId,leaseId,added,message])
       await client.query('COMMIT')
@@ -87,6 +94,7 @@ export async function processProspectDiscovery() {
     console.error('[prospecting] Automatic discovery batch failed', { name: error instanceof Error ? error.name : 'Unknown' })
     message = error instanceof Error && /^(Research|No assigned|Discovery|Membership)/.test(error.message) ? error.message : 'This discovery batch failed. It will retry automatically.'
     await pool.query(`UPDATE "ProspectDiscovery" SET "lockedUntil"=NULL,"leaseId"=NULL,"lastMessage"=$4,
+      "progress"=jsonb_build_object('phase','ERROR','message',$4::text),
       "categoryCursor"="categoryCursor"+1,"nextRunAt"=now()+interval '1 hour'
       WHERE "organizationId"=$1 AND "authUserId"=$2 AND "leaseId"=$3`, [job.organizationId,job.authUserId,leaseId,message])
     return { state: 'retry-scheduled' }

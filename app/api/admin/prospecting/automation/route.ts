@@ -10,7 +10,7 @@ export async function GET() {
   const row = (await pool.query(`SELECT "enabled","location","targetContact","dailyTarget",
     CASE WHEN "day"=CURRENT_DATE THEN "addedToday" ELSE 0 END AS "addedToday",
     CASE WHEN "day"=CURRENT_DATE THEN "runsToday" ELSE 0 END AS "runsToday",
-    "totalAdded","lastRunAt","nextRunAt","lastMessage",("lockedUntil">now()) AS "running"
+    "totalAdded","lastRunAt","nextRunAt","lastMessage","progress",("lockedUntil">now()) AS "running"
     FROM "ProspectDiscovery" WHERE "organizationId"=$1 AND "authUserId"=$2`, [organization.id,user.id])).rows[0]
   const form = (await pool.query(`SELECT "form" FROM "ProspectingPreference" WHERE "organizationId"=$1 AND "authUserId"=$2`, [organization.id,user.id])).rows[0]?.form
   return NextResponse.json({ discovery: row || { enabled: false, location: form?.location || '', targetContact: form?.targetContact || '', dailyTarget: 50, addedToday: 0, totalAdded: 0 }, configured: Boolean(process.env.OPENAI_API_KEY), staff: organization.role === 'STAFF' }, { headers: { 'Cache-Control': 'no-store' } })
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   if (body.enabled && !count) return NextResponse.json({ error: 'Add industry categories or ask an administrator to assign industries first.' }, { status: 400 })
   await pool.query(`INSERT INTO "ProspectDiscovery" ("organizationId","authUserId","enabled","location","targetContact","dailyTarget")
     VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT ("organizationId","authUserId") DO UPDATE SET
-    "enabled"=$3,"location"=$4,"targetContact"=$5,"dailyTarget"=$6,"leaseId"=NULL,"lockedUntil"=NULL,
+    "enabled"=$3,"location"=$4,"targetContact"=$5,"dailyTarget"=$6,"leaseId"=NULL,"lockedUntil"=NULL,"progress"='{}'::jsonb,
     "nextRunAt"=now(),"lastMessage"=CASE WHEN $3 THEN 'Waiting for the scheduler.' ELSE 'Automatic discovery paused.' END`,
   [organization.id,user.id,body.enabled,location,targetContact,body.dailyTarget])
   return NextResponse.json({ ok: true })

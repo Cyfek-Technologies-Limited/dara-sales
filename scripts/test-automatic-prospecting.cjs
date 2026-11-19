@@ -22,10 +22,12 @@ async function scenario({ remaining = 50, revoked = false, providerFailure = fal
   }
   const pool = { query, connect: async () => ({ query, release() {} }) }
   const businesses = ['Other owner','Own existing','First new','Second new','No contacts'].map((name,index) => ({ businessName:name,website:`https://example${index}.com`,sourceUrl:`https://example${index}.com/about`, publicEmail:index===4?'':`work@example${index}.com`,summary:'Sourced company' }))
-  const researchProspects = async (body, scope) => {
+  const researchProspects = async (body, scope, exclusions, report) => {
     assert.equal(body.categoryId, 'category')
     assert.equal(scope.role, 'STAFF')
     assert.deepEqual(Array.from(scope.industryIds), ['industry'])
+    await report({ phase:'SEARCHING', message:'Searching public sources.' })
+    await report({ phase:'CONTACTS', message:'Checking contacts.', company:'First new',checked:1,total:2 })
     return { ok: !providerFailure, json: async () => providerFailure ? { code:'SEARCH_TIMEOUT' } : { businesses } }
   }
   const module = { exports: {} }
@@ -43,6 +45,11 @@ async function scenario({ remaining = 50, revoked = false, providerFailure = fal
   assert.ok(normal.inserts.every(values => values[2]==='staff'))
   assert.deepEqual(normal.updates.map(values=>values[0]),['own'])
   assert.ok(normal.queries.some(q=>q.sql==='COMMIT'))
+  const reported=normal.queries.filter(q=>q.sql.includes('SET "progress"=$4')).map(q=>JSON.parse(q.values[3]))
+  assert.deepEqual(reported.map(p=>p.phase),['SEARCHING','CONTACTS','SAVING'])
+  assert.equal(reported[1].company,'First new')
+  assert.equal(reported[1].checked,1)
+  assert.ok(normal.queries.filter(q=>q.sql.includes('SET "progress"=$4')).every(q=>q.sql.includes('"leaseId"=$3') && q.sql.includes('"enabled"')))
   const capped = await scenario({ remaining:1 })
   assert.equal(capped.inserts.length,1)
   const revoked = await scenario({ revoked:true })

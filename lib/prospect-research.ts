@@ -30,7 +30,9 @@ function sourceKey(value: string) {
   return `${siteHost(value)}${url.port ? `:${url.port}` : ''}${url.pathname.replace(/\/+$/, '')}${url.search}`
 }
 
-export async function researchProspects(body: Record<string, any>, admin: { organizationId: string; role: string; industryIds: string[] }, backgroundExclusions = '') {
+export type ResearchProgress = { phase: 'SEARCHING' | 'CONTACTS' | 'SAVING' | 'COMPLETE' | 'ERROR'; message: string; company?: string; checked?: number; total?: number }
+
+export async function researchProspects(body: Record<string, any>, admin: { organizationId: string; role: string; industryIds: string[] }, backgroundExclusions = '', onProgress?: (progress: ResearchProgress) => Promise<void>) {
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'Web prospect search is not configured. Add OPENAI_API_KEY to the server environment.' }, { status: 503 })
 
   const offering = admin.role !== 'STAFF' && typeof body.offering === 'string' ? body.offering.trim().slice(0, 500) : ''
@@ -69,6 +71,7 @@ export async function researchProspects(body: Record<string, any>, admin: { orga
   let providerRequestId: string | null = null
   let phase = 'research'
   try {
+    await onProgress?.({ phase: 'SEARCHING', message: `Searching public sources for ${category.name} businesses in ${location}.` })
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
@@ -217,12 +220,16 @@ Also research the appropriate publicly listed business contact (for example proc
     // deciding contact requirements, including contact pages not indexed by search.
     phase = 'contacts'
     const contactDeadline = Date.now() + 35000
+    let checked = 0
+    await onProgress?.({ phase: 'CONTACTS', message: 'Checking published email addresses and phone numbers.', checked, total: candidates.length })
     const enriched = new Array<(typeof candidates)[number] & Partial<Awaited<ReturnType<typeof extractWebsiteContacts>>>>(candidates.length)
     let cursor = 0
     await Promise.all(Array.from({ length: Math.min(4, candidates.length) }, async () => {
       while (cursor < candidates.length) {
         const index = cursor++
         const business = candidates[index]
+        await onProgress?.({ phase: 'CONTACTS', message: 'Checking published work contacts.', company: business.businessName, checked, total: candidates.length })
+        try {
         if (targetContact && (business.publicEmail || business.publicPhone)) {
           if (business.publicEmail && business.publicPhone) { enriched[index] = business; continue }
           const contacts = await researchBusinessContacts(business.website, business.businessName, [], contactDeadline)
@@ -256,6 +263,10 @@ Also research the appropriate publicly listed business contact (for example proc
           contactSourceUrl: emailSourceUrl || phoneSourceUrl,
           contactLookupStatus: publicEmail && publicPhone ? 'FOUND' : publicEmail || publicPhone ? 'PARTIAL' : contacts.contactLookupStatus,
           contactLookupMessage: contacts.usedSearchIndex ? contacts.contactLookupMessage : publicEmail && publicPhone ? 'Published email and phone found on official business pages.' : contacts.contactLookupMessage,
+        }
+        } finally {
+          checked++
+          await onProgress?.({ phase: 'CONTACTS', message: 'Checking published email addresses and phone numbers.', checked, total: candidates.length })
         }
       }
     }))
