@@ -1,0 +1,28 @@
+const assert=require('node:assert/strict')
+const fs=require('node:fs')
+const vm=require('node:vm')
+const ts=require('typescript')
+const ExcelJS=require('exceljs')
+const mod={exports:{}}
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/prospect-excel.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{module:mod,exports:mod.exports,require,Date})
+;(async()=>{
+  const lead={businessName:'=HYPERLINK("https://example.com")',email:'work@example.com',phone:'08001234567',contactStatus:'RESPONSE',responseText:'Please call next week.',industry:'Manufacturing',categoryName:'Packaging',website:'https://example.com',contactName:'Chinémé',ownerName:'Team member',ownerEmail:'member@example.com',notes:'Line one\nLine two',source:'https://example.com/contact',createdAt:'2026-11-20T08:00:00Z',updatedAt:'2026-11-20T09:00:00Z'}
+  const bytes=await mod.exports.buildProspectWorkbook([lead,{...lead,businessName:'Second business',phone:'+2348001234567',email:null,responseText:null}],'Example workspace','All statuses')
+  const workbook=new ExcelJS.Workbook()
+  await workbook.xlsx.load(bytes)
+  const sheet=workbook.getWorksheet('Businesses')
+  assert.equal(sheet.getCell('A6').value,lead.businessName)
+  assert.equal(sheet.getCell('A6').type,ExcelJS.ValueType.String)
+  assert.equal(sheet.getCell('C6').value,'08001234567')
+  assert.equal(sheet.getCell('C7').value,'+2348001234567')
+  assert.equal(sheet.getCell('D6').value,'Response')
+  assert.equal(sheet.getCell('E6').value,lead.responseText)
+  assert.equal(sheet.getCell('I6').value,'Chinémé')
+  assert.equal(sheet.getCell('B7').value,'')
+  assert.equal(sheet.getCell('N6').value.toISOString(),lead.createdAt.replace('Z','.000Z'))
+  assert.equal(sheet.views[0].ySplit,5)
+  assert.ok(sheet.getTable('Businesses'))
+  assert.equal(sheet.actualRowCount,6) // Title, metadata, note, headers, two businesses.
+  assert.equal(sheet.rowCount,7)
+  console.log('Passed Excel round trip: row count, contacts, response, Unicode, dates, frozen headers and formula safety.')
+})().catch(error=>{console.error(error);process.exitCode=1})
