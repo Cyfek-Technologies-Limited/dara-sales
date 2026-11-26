@@ -21,6 +21,12 @@ export async function POST(request: Request) {
   if (!workspace) return NextResponse.json({ error: 'Sign in to your workspace.' }, { status: 401 })
   if (request.headers.get('origin') !== new URL(request.url).origin) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 })
   const body = await request.json().catch(() => ({}))
+  if (body.action === 'pause') {
+    await pool.query(`UPDATE "ProspectDiscovery" SET "enabled"=false,"leaseId"=NULL,"lockedUntil"=NULL,
+      "progress"='{}'::jsonb,"lastMessage"='Automatic prospecting paused.'
+      WHERE "organizationId"=$1 AND "authUserId"=$2`, [workspace.organization.id,workspace.user.id])
+    return NextResponse.json({ ok: true })
+  }
   const inputLocations = body.locations === undefined ? [body.location || ''] : body.locations
   if (!Array.isArray(inputLocations) || inputLocations.length > 20 || inputLocations.some((value: unknown) => typeof value !== 'string' || value.length > 160)) return NextResponse.json({ error: 'Add up to 20 locations, each no longer than 160 characters.' }, { status: 400 })
   const seen = new Set<string>()

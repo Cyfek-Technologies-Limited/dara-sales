@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useCallback, useEffect, useState } from 'react'
-import { Mail, PenLine, LoaderCircle } from 'lucide-react'
+import { Mail, PenLine, LoaderCircle, Pause } from 'lucide-react'
 import OutreachLiveMonitor from '@/components/outreach-live-monitor'
 import OutreachContactDirectory from '@/components/outreach-contact-directory'
 
@@ -118,15 +118,16 @@ export default function EmailOutreachManager() {
   }
 
   async function updateOutreach(action: 'save' | 'activate' | 'pause') {
-    if (generating || busy || readingFiles || !data) return
+    if (busy || !data || (action !== 'pause' && (generating || readingFiles))) return
     setBusy(true); setPendingAction(action); setError(''); setMessage('')
     if (action === 'activate') document.getElementById('live-outreach')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     try {
-      const response = await fetch('/api/admin/email-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...profile, attachments, action, confirmed: approved }), signal: AbortSignal.timeout(115000) })
+      const response = await fetch('/api/admin/email-outreach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(action === 'pause' ? { action } : { ...profile, attachments, action, confirmed: approved }), signal: AbortSignal.timeout(115000) })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || 'Could not update your outreach.')
       setMessage(result.message); setApproved(false); setActivityVersion(value => value + 1)
-      await load(true)
+      if (action === 'pause') setData(current => current ? { ...current, profile: current.profile ? {...current.profile,enabled:false}:null, automation: {...current.automation,enabled:false} } : current)
+      await load(action !== 'pause')
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not update your outreach.') }
     finally { setBusy(false); setPendingAction('') }
   }
@@ -143,6 +144,11 @@ export default function EmailOutreachManager() {
   const field = 'mt-2 w-full rounded-xl border-[1px] border-black/30 bg-white px-4 py-3 text-sm text-[#0b1f3a] disabled:opacity-60'
   return <div className="space-y-6 text-[#0b1f3a]">
     <header><p className="text-xs font-bold uppercase tracking-widest text-[#8a509b]">Your outreach, on autopilot</p><h1 className="mt-2 text-3xl font-bold">Email outreach</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Save your prospects. Once automation is active, contacts with an email address join your outreach automatically, including unassigned prospects.</p></header>
+    <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-300 bg-white p-5" aria-label="Automatic emailing controls">
+      <div><h2 className="font-semibold">Automatic emailing <span className={`ml-2 rounded-full px-2 py-1 text-xs ${data?.profile?.enabled?'bg-emerald-50 text-emerald-800':'bg-slate-100 text-slate-600'}`}>{!data?'Loading…':data.profile?.enabled?'Active':'Paused'}</span></h2><p className="mt-2 text-xs text-slate-600">Pausing stops new sends for this organization. Prospect discovery continues independently. An email already being sent may still finish.</p></div>
+      {data?.profile?.enabled && <button type="button" disabled={busy} onClick={()=>void updateOutreach('pause')} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">{pendingAction==='pause'?<LoaderCircle className="size-4 animate-spin"/>:<Pause className="size-4"/>}{pendingAction==='pause'?'Pausing…':'Pause automatic emailing'}</button>}
+      {data && !data.profile?.enabled && <p className="text-xs text-slate-600">Review your message below, approve it, then select Start sending emails to resume.</p>}
+    </section>
     {error && <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">{error}</p>}
     {message && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">{message}</p>}
     <OutreachLiveMonitor starting={pendingAction === 'activate'} refreshKey={activityVersion} />
@@ -190,7 +196,7 @@ export default function EmailOutreachManager() {
         {attachmentError && <p role="alert" className="mt-2 text-sm text-red-800">{attachmentError}</p>}
         <ul className="mt-3 space-y-2">{attachments.map((file, index) => <li key={file.id || index} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="min-w-0 break-words">{file.name} <span className="text-xs text-slate-500">({Math.ceil(file.size / 1024)} KB)</span></span><button type="button" className="shrink-0 font-semibold text-red-700" aria-label={'Remove ' + file.name} onClick={() => { setAttachments(current => current.filter((_, position) => position !== index)); setApproved(false); setAttachmentError('') }}>Remove</button></li>)}</ul>
       </fieldset>
-      {data?.profile?.enabled ? <button type="button" disabled={busy} onClick={() => updateOutreach('pause')} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">Pause my outreach to edit</button> : <><button disabled={busy || generating || readingFiles || !data} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">{pendingAction === 'save' ? 'Saving message…' : 'Save message'}</button><label className="flex items-start gap-3 text-sm leading-6"><input id="outreach-approval" type="checkbox" disabled={generating || busy || readingFiles} checked={approved} onChange={event => setApproved(event.target.checked)} className="mt-1 size-4 accent-[#0b1f3a]" /><span>I approve this message, any selected attachments, and audience for my organization. Matching saved prospects may receive this email automatically.</span></label><button type="button" aria-describedby="outreach-send-requirements" disabled={busy || generating || readingFiles || sendingRequirements.length > 0} onClick={() => updateOutreach('activate')} className="rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy && <LoaderCircle className="mr-2 inline size-4 animate-spin" />}{pendingAction === 'activate' ? 'Preparing and starting emails...' : busy ? 'Updating outreach...' : 'Start sending emails'}</button></>}
+      {data?.profile?.enabled ? <button type="button" disabled={busy} onClick={() => updateOutreach('pause')} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">{pendingAction === 'pause' ? 'Pausing…' : 'Pause automatic emailing'}</button> : <><button disabled={busy || generating || readingFiles || !data} className="rounded-xl border-[1px] border-black/30 px-4 py-3 text-sm font-semibold">{pendingAction === 'save' ? 'Saving message…' : 'Save message'}</button><label className="flex items-start gap-3 text-sm leading-6"><input id="outreach-approval" type="checkbox" disabled={generating || busy || readingFiles} checked={approved} onChange={event => setApproved(event.target.checked)} className="mt-1 size-4 accent-[#0b1f3a]" /><span>I approve this message, any selected attachments, and audience for my organization. Matching saved prospects may receive this email automatically.</span></label><button type="button" aria-describedby="outreach-send-requirements" disabled={busy || generating || readingFiles || sendingRequirements.length > 0} onClick={() => updateOutreach('activate')} className="rounded-xl bg-[#0b1f3a] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy && <LoaderCircle className="mr-2 inline size-4 animate-spin" />}{pendingAction === 'activate' ? 'Preparing and starting emails...' : busy ? 'Updating outreach...' : 'Start sending emails'}</button></>}
       {!data?.profile?.enabled && <div id="outreach-send-requirements" aria-live="polite" className="text-sm leading-6">
         {sendingRequirements.length > 0 ? <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950"><p className="font-semibold">Before you can start sending:</p><ul className="mt-2 list-disc space-y-1 pl-5">{sendingRequirements.map(item => <li key={item.target}><a href={'#' + item.target} onClick={event => { event.preventDefault(); const element = document.getElementById(item.target); element?.scrollIntoView({ behavior: 'smooth', block: 'center' }); element?.focus() }} className="underline underline-offset-2">{item.text}</a></li>)}</ul></div> : <p className="text-slate-600">{busy ? 'Updating outreach…' : generating ? 'Waiting for email generation to finish…' : readingFiles ? 'Finishing your optional attachment upload…' : 'Ready to send from ' + (data?.senders.find(sender => sender.id === profile.senderId)?.email || 'your connected mailbox') + '.'}</p>}
       </div>}
